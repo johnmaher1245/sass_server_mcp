@@ -5,7 +5,7 @@ Read-only MCP server providing AI tools for querying the SASS production databas
 ## Architecture
 
 ```
-mcp-server/
+server_mcp/
 ├── index.js              # Entry point — imports, tool/handler registration, server setup
 ├── config/config.js      # Collection names, projections, limits
 ├── services/

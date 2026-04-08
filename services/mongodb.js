@@ -487,7 +487,7 @@ class MongoDBService {
         return ticket;
     }
 
-    async markTicketInProgress({ ticket_id, testing_summary }) {
+    async markTicketInProgress({ ticket_id, testing_summary, resolution_summary }) {
         await this.ensureConnection();
 
         const ticket = await this.systemTickets.findOne(
@@ -499,9 +499,11 @@ class MongoDBService {
         }
 
         const previous_status = ticket.status;
+        const update = { status: 'in_progress', admin_notes: testing_summary, updated_at: Date.now() };
+        if (resolution_summary) update.resolution_summary = resolution_summary;
         await this.systemTickets.updateOne(
             { _id: new ObjectId(ticket_id) },
-            { $set: { status: 'in_progress', admin_notes: testing_summary, updated_at: Date.now() } },
+            { $set: update },
         );
 
         return {
@@ -511,6 +513,7 @@ class MongoDBService {
             previous_status,
             new_status: 'in_progress',
             testing_summary,
+            resolution_summary,
         };
     }
 

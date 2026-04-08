@@ -14,8 +14,12 @@ export const markTicketInProgressTool = {
                 type: 'string',
                 description: 'A 1-2 sentence summary of how to test the bug fix or feature, including relevant links or pages to check',
             },
+            resolution_summary: {
+                type: 'string',
+                description: 'A plain-English summary of what was fixed or added, written for a non-technical person. Avoid code terms, file names, or implementation details. Example: "Fixed the recording playback button on the phone calls page so it plays audio correctly."',
+            },
         },
-        required: ['ticket_id', 'testing_summary'],
+        required: ['ticket_id', 'testing_summary', 'resolution_summary'],
     },
 };
 
