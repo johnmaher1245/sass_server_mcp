@@ -8,8 +8,8 @@ export const searchSystemTicketsTool = {
         properties: {
             status: {
                 type: 'string',
-                enum: ['open', 'in_progress', 'resolved', 'closed'],
-                description: 'Filter by ticket status',
+                enum: ['open', 'in_progress', 'resolved', 'closed', 'deferred'],
+                description: 'Filter by ticket status. Deferred tickets are NOT returned by default or with include_resolved — they only appear when status is explicitly set to "deferred".',
             },
             category: {
                 type: 'string',
@@ -27,7 +27,7 @@ export const searchSystemTicketsTool = {
             },
             include_resolved: {
                 type: 'boolean',
-                description: 'Include resolved and closed tickets (default: false — only shows open/in_progress)',
+                description: 'Include resolved and closed tickets (default: false — only shows open/in_progress). Does NOT include deferred tickets — pass status="deferred" to find those.',
             },
             start_date: {
                 type: 'string',

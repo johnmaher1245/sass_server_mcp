@@ -2,7 +2,7 @@ import mongoService from '../services/mongodb.js';
 
 export const getSystemTicketTool = {
     name: 'get_system_ticket',
-    description: 'Get full details for a single system ticket by ID. Returns all fields including description, steps_taken, expected_behavior, device_context, diagnostic_data, related_server_logs, attachments metadata, and admin_notes.',
+    description: 'Get full details for a single system ticket by ID. Returns all fields including description, steps_taken, expected_behavior, device_context, attachments metadata, admin_notes, and thread history (reopen comments, status changes, admin responses). Use get_ticket_thread for a focused, user-resolved view of the conversation.',
     inputSchema: {
         type: 'object',
         properties: {

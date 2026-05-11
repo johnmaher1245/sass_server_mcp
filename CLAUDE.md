@@ -1,6 +1,6 @@
 # SASS MCP Server
 
-Read-only MCP server providing AI tools for querying the SASS production database. 63 tools across 15 phases, all read-only MongoDB queries.
+Read-only MCP server providing AI tools for querying the SASS production database. Tools organized into phases 1–18, all read-only MongoDB queries except `create_changelog_entry`.
 
 ## Architecture
 
@@ -236,6 +236,46 @@ Most entities follow a two-tool pattern:
 | `verify_docket_actions` | Cross-reference entry dates vs created items/events — PASS/WARN/FAIL |
 | `trace_docket_to_events` | End-to-end trace: docket entries to resulting actions for a matter |
 
+### Call Center Investigation
+| Tool | Description |
+|------|-------------|
+| `search_calls` | Search calls by phone, contact, matter, status, direction, queue, date |
+| `get_call_detail` | Full call record with routing events, legs, timing, AI summary |
+| `get_call_routing_trace` | Reconstruct routing path with resolved names — "why was this call routed to X?" |
+| `get_call_timeline` | Unified chronological timeline merging routing, conference, leg, and hold events |
+| `get_phone_number_config` | Phone number → call flow → division → recording settings |
+| `get_call_flow_config` | Full flow config: business hours, routing rules, tasks, with resolved names |
+| `search_call_flows` | Find call flows by division or name |
+| `get_call_queue_config` | Queue config: agents (with availability), timeouts, SLA, overflow behavior |
+| `get_call_offers` | Which agents were offered a call and what happened (answered/ignored/declined) |
+| `get_call_queue_entries` | Active and recent queue entries — who's waiting, priority, connection status |
+| `get_agent_call_status` | Agent availability: in queue, on call, idle time. Single agent or full queue |
+| `get_call_handle_times` | Per-agent handle time logs with total/average duration |
+| `get_call_voicemails` | Voicemail records with transcription, assigned agents, resolved status |
+| `get_call_hold_events` | Hold/unhold timeline with paired periods and total hold time |
+| `get_call_transcription` | Call transcription and AI analysis: full text, speaker turns, summary, category, rating |
+| `get_call_quality_metrics` | Per-leg jitter/packet loss/latency with good/warning/poor ratings |
+
+### Changelog
+| Tool | Description |
+|------|-------------|
+| `create_changelog_entry` | **WRITE** — Create a new changelog entry (feature, bugfix, improvement, announcement) for staff visibility |
+| `query_changelog_entries` | Search/filter changelog entries by type, text, tags, date range |
+
+### Contact Resolution & User Activity (Phase 18)
+| Tool | Description |
+|------|-------------|
+| `find_contacts_by_phone` | Replicates the server's fetchContact lookup (sequential phone → phone_2 → phone_3, E.164 exact match, first hit wins). Returns all candidates + winner_id + ambiguous flag. Use for wrong-name bug triage. |
+| `get_logs_by_user` | system_logs filtered by user_id within a time window. Use to verify what a specific user actually triggered server-side (requests, socket emits, errors). |
+
+**Also added to existing tools:**
+- `search_calls` — new `user_id` filter (matches `call_legs.user`, uses indexed `{ "call_legs.user": 1, company: 1 }`)
+- `get_call_detail` — now returns `contact_lookup` block re-running fetchContact logic against from/to; surfaces `ambiguous: true` and `matches_call_contact: false` when the call's stored contact has drifted. Also returns `transfer_summary` with ordered `participants` so transfer chains are visible without reading raw `call_legs` (`is_transfer: true` when >1 agent handled the call).
+- `investigate_ticket` — now includes `recent_calls_for_reporter` (calls where `ticket.user` was a `call_legs` participant within ±60 min, matching the automation/dry-run window)
+- `get_attachment` — `MAX_INLINE_BYTES` raised from 5MB → 20MB (screenshots are uploaded at native resolution, no server-side resize; old cap was dropping legible screenshots into the metadata-only branch). Note: downstream image renderers (e.g. VSCode) may still display images at their own resolution.
+
+**Key primitive:** `mongoService._resolvePhoneToContact(company, phone)` in `services/mongodb.js` uses the `phone` npm library (same version as main server) to normalize to E.164, then runs the sequential lookup. `find_contacts_by_phone` and `get_call_detail`'s contact_lookup both delegate to this — don't duplicate the logic elsewhere.
+
 ## Collections
 
 | Config Key | Collection | Used By |
@@ -267,9 +307,22 @@ Most entities follow a two-tool pattern:
 | `bkDocketPatternRules` | bk_docket_pattern_rules | Docket pattern rules |
 | `bkCases` | bk_cases | Docket verification (date comparison) |
 | `bkDistricts` | bk_districts | Docket verification (timezone) |
+| `calls` | calls | Call center investigation |
+| `callFlows` | call_flows | Call flow config, routing trace |
+| `callPhoneNumbers` | call_phone_numbers | Phone number config |
+| `callQueues` | call_queues | Queue config, agent status |
+| `callQueueEntries` | call_queue_entries | Queue entries |
+| `callOffers` | call_offers | Agent call offers |
+| `callVoicemails` | call_voicemails | Voicemail records |
+| `callHoldEvents` | call_hold_events | Hold event timeline |
+| `callHandleTimes` | call_handle_times | Agent handle times |
+| `customFields` | custom_fields | Routing event resolution |
+| `divisions` | divisions | Division name resolution |
+| `leadSources` | lead_sources | Phone number config resolution |
+| `changelogEntries` | changelog_entries | Changelog tools |
 
 ## Security
 
 - **NEVER read `.env*` files** — they contain database credentials
-- All queries are read-only
+- Most queries are read-only; `create_changelog_entry` is a write tool
 - Sensitive fields (passwords, SSN, security codes) are excluded via projections in config.js

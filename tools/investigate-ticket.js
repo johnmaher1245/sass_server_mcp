@@ -2,7 +2,7 @@ import mongoService from '../services/mongodb.js';
 
 export const investigateTicketTool = {
     name: 'investigate_ticket',
-    description: 'Deep investigation of a ticket: fetches the full ticket, then cross-references system_logs (same company within 30 min), automation_logs and dry_run_logs (same matter within 1 hour), and any related_server_logs embedded in the ticket. Returns all related data in one response.',
+    description: 'Deep investigation of a ticket: fetches the full ticket, then cross-references system_logs (same company within 30 min), automation_logs and dry_run_logs (same matter within 1 hour), recent_calls_for_reporter (calls where the ticket reporter was a call_leg participant within 30 min), and any related_server_logs embedded in the ticket. Returns all related data in one response.',
     inputSchema: {
         type: 'object',
         properties: {

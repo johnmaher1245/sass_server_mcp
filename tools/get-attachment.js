@@ -4,8 +4,11 @@ const IMAGE_MIMETYPES = new Set([
     'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp',
 ]);
 
-// Max size we'll return inline (5MB) — anything larger gets truncated info
-const MAX_INLINE_BYTES = 5 * 1024 * 1024;
+// Max size we'll return inline. Screenshots from the ticket flow are uploaded at native resolution
+// (50MB multer cap, no server-side resize), so the old 5MB limit was dropping legible images into
+// the metadata-only branch. Raised to 20MB to cover typical full-res screenshots while still
+// keeping a guard against accidental huge file fetches.
+const MAX_INLINE_BYTES = 20 * 1024 * 1024;
 
 export const getAttachmentTool = {
     name: 'get_attachment',

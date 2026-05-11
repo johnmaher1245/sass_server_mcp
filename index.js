@@ -56,6 +56,8 @@ import { getSystemTicketTool, handleGetSystemTicket } from './tools/get-system-t
 import { getOpenTicketsSummaryTool, handleGetOpenTicketsSummary } from './tools/get-open-tickets-summary.js';
 import { getSystemTicketDiagnosticsTool, handleGetSystemTicketDiagnostics } from './tools/get-system-ticket-diagnostics.js';
 import { markTicketInProgressTool, handleMarkTicketInProgress } from './tools/mark-ticket-in-progress.js';
+import { markTicketDeferredTool, handleMarkTicketDeferred } from './tools/mark-ticket-deferred.js';
+import { getTicketThreadTool, handleGetTicketThread } from './tools/get-ticket-thread.js';
 
 // Cross-collection intelligence (Phase 3)
 import { investigateTicketTool, handleInvestigateTicket } from './tools/investigate-ticket.js';
@@ -112,6 +114,32 @@ import { getDocketPatternRulesTool, handleGetDocketPatternRules } from './tools/
 import { verifyDocketActionsTool, handleVerifyDocketActions } from './tools/verify-docket-actions.js';
 import { traceDocketToEventsTool, handleTraceDocketToEvents } from './tools/trace-docket-to-events.js';
 
+// Call center investigation (Phase 16)
+import { searchCallsTool, handleSearchCalls } from './tools/search-calls.js';
+import { getCallDetailTool, handleGetCallDetail } from './tools/get-call-detail.js';
+import { getCallRoutingTraceTool, handleGetCallRoutingTrace } from './tools/get-call-routing-trace.js';
+import { getCallTimelineTool, handleGetCallTimeline } from './tools/get-call-timeline.js';
+import { getPhoneNumberConfigTool, handleGetPhoneNumberConfig } from './tools/get-phone-number-config.js';
+import { getCallFlowConfigTool, handleGetCallFlowConfig } from './tools/get-call-flow-config.js';
+import { searchCallFlowsTool, handleSearchCallFlows } from './tools/search-call-flows.js';
+import { getCallQueueConfigTool, handleGetCallQueueConfig } from './tools/get-call-queue-config.js';
+import { getCallOffersTool, handleGetCallOffers } from './tools/get-call-offers.js';
+import { getCallQueueEntriesTool, handleGetCallQueueEntries } from './tools/get-call-queue-entries.js';
+import { getAgentCallStatusTool, handleGetAgentCallStatus } from './tools/get-agent-call-status.js';
+import { getCallHandleTimesTool, handleGetCallHandleTimes } from './tools/get-call-handle-times.js';
+import { getCallVoicemailsTool, handleGetCallVoicemails } from './tools/get-call-voicemails.js';
+import { getCallHoldEventsTool, handleGetCallHoldEvents } from './tools/get-call-hold-events.js';
+import { getCallTranscriptionTool, handleGetCallTranscription } from './tools/get-call-transcription.js';
+import { getCallQualityMetricsTool, handleGetCallQualityMetrics } from './tools/get-call-quality-metrics.js';
+
+// Changelog (Phase 17)
+import { createChangelogEntryTool, handleCreateChangelogEntry } from './tools/create-changelog-entry.js';
+import { queryChangelogEntriesTool, handleQueryChangelogEntries } from './tools/query-changelog-entries.js';
+
+// Contact resolution & user activity (Phase 18)
+import { findContactsByPhoneTool, handleFindContactsByPhone } from './tools/find-contacts-by-phone.js';
+import { getLogsByUserTool, handleGetLogsByUser } from './tools/get-logs-by-user.js';
+
 class SassLogsServer {
     constructor() {
         this.server = new Server(
@@ -164,6 +192,8 @@ class SassLogsServer {
             getOpenTicketsSummaryTool,
             getSystemTicketDiagnosticsTool,
             markTicketInProgressTool,
+            markTicketDeferredTool,
+            getTicketThreadTool,
             // Cross-collection intelligence (Phase 3)
             investigateTicketTool,
             getSystemHealthTool,
@@ -209,6 +239,29 @@ class SassLogsServer {
             getDocketPatternRulesTool,
             verifyDocketActionsTool,
             traceDocketToEventsTool,
+            // Call center investigation (Phase 16)
+            searchCallsTool,
+            getCallDetailTool,
+            getCallRoutingTraceTool,
+            getCallTimelineTool,
+            getPhoneNumberConfigTool,
+            getCallFlowConfigTool,
+            searchCallFlowsTool,
+            getCallQueueConfigTool,
+            getCallOffersTool,
+            getCallQueueEntriesTool,
+            getAgentCallStatusTool,
+            getCallHandleTimesTool,
+            getCallVoicemailsTool,
+            getCallHoldEventsTool,
+            getCallTranscriptionTool,
+            getCallQualityMetricsTool,
+            // Changelog (Phase 17)
+            createChangelogEntryTool,
+            queryChangelogEntriesTool,
+            // Contact resolution & user activity (Phase 18)
+            findContactsByPhoneTool,
+            getLogsByUserTool,
         ];
 
         this.toolHandlers = {
@@ -249,6 +302,8 @@ class SassLogsServer {
             'get_open_tickets_summary': handleGetOpenTicketsSummary,
             'get_system_ticket_diagnostics': handleGetSystemTicketDiagnostics,
             'mark_ticket_in_progress': handleMarkTicketInProgress,
+            'mark_ticket_deferred': handleMarkTicketDeferred,
+            'get_ticket_thread': handleGetTicketThread,
             // Cross-collection intelligence (Phase 3)
             'investigate_ticket': handleInvestigateTicket,
             'get_system_health': handleGetSystemHealth,
@@ -294,6 +349,29 @@ class SassLogsServer {
             'get_docket_pattern_rules': handleGetDocketPatternRules,
             'verify_docket_actions': handleVerifyDocketActions,
             'trace_docket_to_events': handleTraceDocketToEvents,
+            // Call center investigation (Phase 16)
+            'search_calls': handleSearchCalls,
+            'get_call_detail': handleGetCallDetail,
+            'get_call_routing_trace': handleGetCallRoutingTrace,
+            'get_call_timeline': handleGetCallTimeline,
+            'get_phone_number_config': handleGetPhoneNumberConfig,
+            'get_call_flow_config': handleGetCallFlowConfig,
+            'search_call_flows': handleSearchCallFlows,
+            'get_call_queue_config': handleGetCallQueueConfig,
+            'get_call_offers': handleGetCallOffers,
+            'get_call_queue_entries': handleGetCallQueueEntries,
+            'get_agent_call_status': handleGetAgentCallStatus,
+            'get_call_handle_times': handleGetCallHandleTimes,
+            'get_call_voicemails': handleGetCallVoicemails,
+            'get_call_hold_events': handleGetCallHoldEvents,
+            'get_call_transcription': handleGetCallTranscription,
+            'get_call_quality_metrics': handleGetCallQualityMetrics,
+            // Changelog (Phase 17)
+            'create_changelog_entry': handleCreateChangelogEntry,
+            'query_changelog_entries': handleQueryChangelogEntries,
+            // Contact resolution & user activity (Phase 18)
+            'find_contacts_by_phone': handleFindContactsByPhone,
+            'get_logs_by_user': handleGetLogsByUser,
         };
 
         this.setupHandlers();

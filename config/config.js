@@ -32,6 +32,22 @@ export const config = {
         bkDocketPatternRules: 'bk_docket_pattern_rules',
         bkCases: 'bk_cases',
         bkDistricts: 'bk_districts',
+        // Call center
+        calls: 'calls',
+        callFlows: 'call_flows',
+        callPhoneNumbers: 'call_phone_numbers',
+        callQueues: 'call_queues',
+        callQueueEntries: 'call_queue_entries',
+        callOffers: 'call_offers',
+        callVoicemails: 'call_voicemails',
+        callHoldEvents: 'call_hold_events',
+        callHandleTimes: 'call_handle_times',
+        // Changelog
+        changelogEntries: 'changelog_entries',
+        // Additional reference collections
+        customFields: 'custom_fields',
+        divisions: 'divisions',
+        leadSources: 'lead_sources',
     },
 
     defaultLimit: 50,
@@ -65,6 +81,13 @@ export const config = {
     usersProjection: {
         password: 0, security_code: 0, two_factor_secret: 0,
         security: 0, history: 0,
+    },
+
+    // Calls — lean projection for search (strip heavy nested arrays)
+    callsLeanProjection: {
+        routing_events: 0, events: 0, call_legs: 0, call_sids: 0,
+        ai_transcription: 0, ai_transcription_itemized: 0,
+        tags: 0,
     },
 
     // Events & time entries — lean projections for search listings
