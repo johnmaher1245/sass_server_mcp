@@ -140,6 +140,19 @@ import { queryChangelogEntriesTool, handleQueryChangelogEntries } from './tools/
 import { findContactsByPhoneTool, handleFindContactsByPhone } from './tools/find-contacts-by-phone.js';
 import { getLogsByUserTool, handleGetLogsByUser } from './tools/get-logs-by-user.js';
 
+// Payments (Phase 19)
+import { searchPaymentsTool, handleSearchPayments } from './tools/search-payments.js';
+import { getPaymentDetailTool, handleGetPaymentDetail } from './tools/get-payment-detail.js';
+import { searchPaymentPlansTool, handleSearchPaymentPlans } from './tools/search-payment-plans.js';
+import { getPaymentPlanDetailTool, handleGetPaymentPlanDetail } from './tools/get-payment-plan-detail.js';
+import { searchPaymentMethodsTool, handleSearchPaymentMethods } from './tools/search-payment-methods.js';
+import { getPaymentMethodDetailTool, handleGetPaymentMethodDetail } from './tools/get-payment-method-detail.js';
+import { getMatterPaymentsSummaryTool, handleGetMatterPaymentsSummary } from './tools/get-matter-payments-summary.js';
+import { getPaymentProcessorStatsTool, handleGetPaymentProcessorStats } from './tools/get-payment-processor-stats.js';
+import { searchPaymentWebhookEventsTool, handleSearchPaymentWebhookEvents } from './tools/search-payment-webhook-events.js';
+import { getPaymentWebhookEventDetailTool, handleGetPaymentWebhookEventDetail } from './tools/get-payment-webhook-event-detail.js';
+import { searchPaymentTrustEntriesTool, handleSearchPaymentTrustEntries } from './tools/search-payment-trust-entries.js';
+
 class SassLogsServer {
     constructor() {
         this.server = new Server(
@@ -262,6 +275,18 @@ class SassLogsServer {
             // Contact resolution & user activity (Phase 18)
             findContactsByPhoneTool,
             getLogsByUserTool,
+            // Payments (Phase 19)
+            searchPaymentsTool,
+            getPaymentDetailTool,
+            searchPaymentPlansTool,
+            getPaymentPlanDetailTool,
+            searchPaymentMethodsTool,
+            getPaymentMethodDetailTool,
+            getMatterPaymentsSummaryTool,
+            getPaymentProcessorStatsTool,
+            searchPaymentWebhookEventsTool,
+            getPaymentWebhookEventDetailTool,
+            searchPaymentTrustEntriesTool,
         ];
 
         this.toolHandlers = {
@@ -372,6 +397,18 @@ class SassLogsServer {
             // Contact resolution & user activity (Phase 18)
             'find_contacts_by_phone': handleFindContactsByPhone,
             'get_logs_by_user': handleGetLogsByUser,
+            // Payments (Phase 19)
+            'search_payments': handleSearchPayments,
+            'get_payment_detail': handleGetPaymentDetail,
+            'search_payment_plans': handleSearchPaymentPlans,
+            'get_payment_plan_detail': handleGetPaymentPlanDetail,
+            'search_payment_methods': handleSearchPaymentMethods,
+            'get_payment_method_detail': handleGetPaymentMethodDetail,
+            'get_matter_payments_summary': handleGetMatterPaymentsSummary,
+            'get_payment_processor_stats': handleGetPaymentProcessorStats,
+            'search_payment_webhook_events': handleSearchPaymentWebhookEvents,
+            'get_payment_webhook_event_detail': handleGetPaymentWebhookEventDetail,
+            'search_payment_trust_entries': handleSearchPaymentTrustEntries,
         };
 
         this.setupHandlers();

@@ -276,6 +276,30 @@ Most entities follow a two-tool pattern:
 
 **Key primitive:** `mongoService._resolvePhoneToContact(company, phone)` in `services/mongodb.js` uses the `phone` npm library (same version as main server) to normalize to E.164, then runs the sequential lookup. `find_contacts_by_phone` and `get_call_detail`'s contact_lookup both delegate to this — don't duplicate the logic elsewhere.
 
+### Payments (Phase 19)
+| Tool | Description |
+|------|-------------|
+| `search_payments` | Search charges by processor (`fortis_pay`/`law_pay`), status, trust, payment method type, amount range, date, matter, contact, division |
+| `get_payment_detail` | Full charge with resolved method/refund/user + last 5 `payment_events` for triage |
+| `search_payment_plans` | Search subscriptions by processor, finished/delinquent, matter, next-run date. Sorted by `next_run_date` asc so overdue/upcoming surface first |
+| `get_payment_plan_detail` | Full plan including `schedule[]`, primary+backup methods, last 10 linked payments |
+| `search_payment_methods` | Search stored methods by processor, type, expired, primary/backup. Token excluded from results |
+| `get_payment_method_detail` | Full method incl. `lawpay_contact_id`, counters, expiry. Still no token |
+| `get_matter_payments_summary` | One-call matter overview: resolved processor + active plan + methods + last 20 payments + billing counters + trust balance + `processor_distribution` (split across fortis/lawpay for cross-processor migration visibility) |
+| `get_payment_processor_stats` | Headline metrics grouped by processor: payment counts/$/success rate, subscription state, method counts, webhook status. `legacy_unspecified` bucket aggregates pre-LawPay `processor:''` records |
+| `search_payment_webhook_events` | Webhook ingestion records (Fortis Pay, LawPay) — filter by processor, status, event_id, linked payment. Payload stripped |
+| `get_payment_webhook_event_detail` | Full webhook with `payload`, `history[]`, linked payment. Use to debug processor→SASS event mismatches |
+| `search_payment_trust_entries` | Trust account ledger entries for a matter (required). Each row links the underlying payment + its processor |
+
+**Key fields for processor filtering:**
+- `payments.processor` — `'fortis_pay' | 'law_pay' | ''` (older records empty; surfaced as `legacy_unspecified` in stats)
+- `payment_methods.payment_processor` — required, defaults `'fortis_pay'`
+- `payment_subscriptions.payment_processor` — required, defaults `'fortis_pay'`
+- `payment_webhook_events.processor` — required
+- `companies.payment_processor` / `divisions.payment_processor` — company default; division override; resolution helper `division?.payment_processor || company?.payment_processor || 'fortis_pay'` (mirrors `server/server/utils/payments/resolveProcessor.js`)
+
+**Sensitive fields:** `payment_methods.token` (processor card vault reference) is stripped from search results via `config.paymentMethodsLeanProjection` and never returned by `get_payment_method_detail` either.
+
 ## Collections
 
 | Config Key | Collection | Used By |
@@ -320,6 +344,13 @@ Most entities follow a two-tool pattern:
 | `divisions` | divisions | Division name resolution |
 | `leadSources` | lead_sources | Phone number config resolution |
 | `changelogEntries` | changelog_entries | Changelog tools |
+| `payments` | payments | Payment tools (Phase 19) |
+| `paymentSubscriptions` | payment_subscriptions | Payment plan tools |
+| `paymentMethods` | payment_methods | Payment method tools |
+| `paymentEvents` | payment_events | `get_payment_detail` audit trail |
+| `paymentWebhookEvents` | payment_webhook_events | Webhook event tools |
+| `paymentTrustEntries` | payment_trust_entries | Trust ledger tool + matter summary |
+| `companies` | companies | Processor resolution in matter summary |
 
 ## Security
 

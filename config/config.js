@@ -48,6 +48,14 @@ export const config = {
         customFields: 'custom_fields',
         divisions: 'divisions',
         leadSources: 'lead_sources',
+        // Payments (Phase 19)
+        payments: 'payments',
+        paymentSubscriptions: 'payment_subscriptions',
+        paymentMethods: 'payment_methods',
+        paymentEvents: 'payment_events',
+        paymentWebhookEvents: 'payment_webhook_events',
+        paymentTrustEntries: 'payment_trust_entries',
+        companies: 'companies',
     },
 
     defaultLimit: 50,
@@ -97,6 +105,18 @@ export const config = {
     },
     timeEntriesLeanProjection: {
         description: 0, source_activities: 0, history: 0,
+    },
+
+    // Payments (Phase 19) — payment docs are slim, no projection needed for search
+    // Payment methods: strip token from search results (returned only in detail)
+    paymentMethodsLeanProjection: {
+        token: 0, history: 0,
+    },
+    paymentSubscriptionsLeanProjection: {
+        schedule: 0, plan_change_dates: 0, portal_plan_change_dates: 0, history: 0,
+    },
+    paymentWebhookEventsLeanProjection: {
+        payload: 0, history: 0,
     },
 };
 
