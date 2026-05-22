@@ -153,6 +153,12 @@ import { searchPaymentWebhookEventsTool, handleSearchPaymentWebhookEvents } from
 import { getPaymentWebhookEventDetailTool, handleGetPaymentWebhookEventDetail } from './tools/get-payment-webhook-event-detail.js';
 import { searchPaymentTrustEntriesTool, handleSearchPaymentTrustEntries } from './tools/search-payment-trust-entries.js';
 
+// BK docket parser (Phase 20)
+import { describeDocketParserTool, handleDescribeDocketParser } from './tools/describe-docket-parser.js';
+import { searchDocketPatternsTool, handleSearchDocketPatterns } from './tools/search-docket-patterns.js';
+import { getDocketParserStatsTool, handleGetDocketParserStats } from './tools/get-docket-parser-stats.js';
+import { explainDocketEntryTool, handleExplainDocketEntry } from './tools/explain-docket-entry.js';
+
 class SassLogsServer {
     constructor() {
         this.server = new Server(
@@ -287,6 +293,11 @@ class SassLogsServer {
             searchPaymentWebhookEventsTool,
             getPaymentWebhookEventDetailTool,
             searchPaymentTrustEntriesTool,
+            // BK docket parser (Phase 20)
+            describeDocketParserTool,
+            searchDocketPatternsTool,
+            getDocketParserStatsTool,
+            explainDocketEntryTool,
         ];
 
         this.toolHandlers = {
@@ -409,6 +420,11 @@ class SassLogsServer {
             'search_payment_webhook_events': handleSearchPaymentWebhookEvents,
             'get_payment_webhook_event_detail': handleGetPaymentWebhookEventDetail,
             'search_payment_trust_entries': handleSearchPaymentTrustEntries,
+            // BK docket parser (Phase 20)
+            'describe_docket_parser': handleDescribeDocketParser,
+            'search_docket_patterns': handleSearchDocketPatterns,
+            'get_docket_parser_stats': handleGetDocketParserStats,
+            'explain_docket_entry': handleExplainDocketEntry,
         };
 
         this.setupHandlers();

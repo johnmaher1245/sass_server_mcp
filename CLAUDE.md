@@ -1,6 +1,6 @@
 # SASS MCP Server
 
-Read-only MCP server providing AI tools for querying the SASS production database. Tools organized into phases 1–18, all read-only MongoDB queries except `create_changelog_entry`.
+Read-only MCP server providing AI tools for querying the SASS production database. Tools organized into phases 1–20, all read-only MongoDB queries except `create_changelog_entry`.
 
 ## Architecture
 
@@ -236,6 +236,16 @@ Most entities follow a two-tool pattern:
 | `verify_docket_actions` | Cross-reference entry dates vs created items/events — PASS/WARN/FAIL |
 | `trace_docket_to_events` | End-to-end trace: docket entries to resulting actions for a matter |
 
+### BK Docket Parser (Phase 20)
+All read-only. The docket parser has TWO layers — hardcoded date extraction (the "important dates") and FOUR configurable rule collections (`bk_docket_pattern_rules`, `bk_discharge_action_rules`, `bk_dismissed_action_rules`, `bk_converted_action_rules`), all matched by the server's `matchesRule.js`. The hardcoded layer is mirrored in `config/docketParserReference.js` — **keep it in sync with `extractData/extractDates.js`** (matched on `annotation.name`, not `docket_text`).
+
+| Tool | Description |
+|------|-------------|
+| `describe_docket_parser` | Full parser picture for a division/workflow: hardcoded date patterns, all four configurable rule collections (grouped active/inactive), new-case detection, and the dead/legacy patterns block (clearly marked inactive) |
+| `search_docket_patterns` | Multi-term include/exclude TEXT search over docket_text (entry matches ANY match_pattern and NONE of exclude_patterns). NOT the rule matcher — trustee/district/require_documents logic is not evaluated |
+| `get_docket_parser_stats` | Division-scoped stats over a date window (default 90d): per-rule firing counts across all 4 sources (last-fired, status breakdown, never-fired vs newly-created), coverage gaps (entries with no actions), date-extraction hit counts |
+| `explain_docket_entry` | Per-entry evidence, NO simulation: recorded actions + automation_logs, candidate rules in scope with their patterns shown, created-after-entry timeline flag, and annotation→date-pattern mapping |
+
 ### Call Center Investigation
 | Tool | Description |
 |------|-------------|
@@ -328,7 +338,10 @@ Most entities follow a two-tool pattern:
 | `workflowDispositions` | workflow_dispositions | Disposition resolution |
 | `outstandingItemTemplates` | outstanding_item_templates | OI template tools |
 | `bkDocketEntries` | bk_docket_entries | Docket tools |
-| `bkDocketPatternRules` | bk_docket_pattern_rules | Docket pattern rules |
+| `bkDocketPatternRules` | bk_docket_pattern_rules | Docket pattern rules, docket parser |
+| `bkDischargeActionRules` | bk_discharge_action_rules | Docket parser (discharge rules) |
+| `bkDismissedActionRules` | bk_dismissed_action_rules | Docket parser (dismissed rules) |
+| `bkConvertedActionRules` | bk_converted_action_rules | Docket parser (converted rules) |
 | `bkCases` | bk_cases | Docket verification (date comparison) |
 | `bkDistricts` | bk_districts | Docket verification (timezone) |
 | `calls` | calls | Call center investigation |

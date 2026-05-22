@@ -30,6 +30,9 @@ export const config = {
         // BK docket
         bkDocketEntries: 'bk_docket_entries',
         bkDocketPatternRules: 'bk_docket_pattern_rules',
+        bkDischargeActionRules: 'bk_discharge_action_rules',
+        bkDismissedActionRules: 'bk_dismissed_action_rules',
+        bkConvertedActionRules: 'bk_converted_action_rules',
         bkCases: 'bk_cases',
         bkDistricts: 'bk_districts',
         // Call center
