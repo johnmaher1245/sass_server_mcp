@@ -13,151 +13,155 @@ import mongoService from './services/mongodb.js';
 import config from './config/config.js';
 
 // System log tools
-import { searchSystemLogsTool, handleSearchSystemLogs } from './tools/search-system-logs.js';
-import { getRecentErrorsTool, handleGetRecentErrors } from './tools/get-recent-errors.js';
-import { getUnresolvedErrorsTool, handleGetUnresolvedErrors } from './tools/get-unresolved-errors.js';
-import { getSystemLogDetailTool, handleGetSystemLogDetail } from './tools/get-system-log-detail.js';
-import { getErrorCategoriesTool, handleGetErrorCategories } from './tools/get-error-categories.js';
+import { searchSystemLogsTool, handleSearchSystemLogs } from './tools/logs/search-system-logs.js';
+import { getRecentErrorsTool, handleGetRecentErrors } from './tools/logs/get-recent-errors.js';
+import { getUnresolvedErrorsTool, handleGetUnresolvedErrors } from './tools/logs/get-unresolved-errors.js';
+import { getSystemLogDetailTool, handleGetSystemLogDetail } from './tools/logs/get-system-log-detail.js';
+import { getErrorCategoriesTool, handleGetErrorCategories } from './tools/logs/get-error-categories.js';
 
 // System log enhancements (Phase 2)
-import { getLogTrendsTool, handleGetLogTrends } from './tools/get-log-trends.js';
-import { getLogsByRequestIdTool, handleGetLogsByRequestId } from './tools/get-logs-by-request-id.js';
-import { getLogsAroundTimestampTool, handleGetLogsAroundTimestamp } from './tools/get-logs-around-timestamp.js';
-import { getLogContextTool, handleGetLogContext } from './tools/get-log-context.js';
+import { getLogTrendsTool, handleGetLogTrends } from './tools/logs/get-log-trends.js';
+import { getLogsByRequestIdTool, handleGetLogsByRequestId } from './tools/logs/get-logs-by-request-id.js';
+import { getLogsAroundTimestampTool, handleGetLogsAroundTimestamp } from './tools/logs/get-logs-around-timestamp.js';
+import { getLogContextTool, handleGetLogContext } from './tools/logs/get-log-context.js';
 
 // Dry run tools
-import { traceDryRunTool, handleTraceDryRun } from './tools/trace-dry-run.js';
-import { searchDryRunsTool, handleSearchDryRuns } from './tools/search-dry-runs.js';
-import { listDryRunFeaturesTool, handleListDryRunFeatures } from './tools/list-dry-run-features.js';
+import { traceDryRunTool, handleTraceDryRun } from './tools/dry-runs/trace-dry-run.js';
+import { searchDryRunsTool, handleSearchDryRuns } from './tools/dry-runs/search-dry-runs.js';
+import { listDryRunFeaturesTool, handleListDryRunFeatures } from './tools/dry-runs/list-dry-run-features.js';
 
 // Dry run verification (Phase 4)
-import { validateDryRunTool, handleValidateDryRun } from './tools/validate-dry-run.js';
-import { compareDryRunsTool, handleCompareDryRuns } from './tools/compare-dry-runs.js';
-import { getDryRunStatsTool, handleGetDryRunStats } from './tools/get-dry-run-stats.js';
-import { getDryRunsForMatterTool, handleGetDryRunsForMatter } from './tools/get-dry-runs-for-matter.js';
+import { validateDryRunTool, handleValidateDryRun } from './tools/dry-runs/validate-dry-run.js';
+import { compareDryRunsTool, handleCompareDryRuns } from './tools/dry-runs/compare-dry-runs.js';
+import { getDryRunStatsTool, handleGetDryRunStats } from './tools/dry-runs/get-dry-run-stats.js';
+import { getDryRunsForMatterTool, handleGetDryRunsForMatter } from './tools/dry-runs/get-dry-runs-for-matter.js';
 
 // Automation log tools
-import { searchAutomationLogsTool, handleSearchAutomationLogs } from './tools/search-automation-logs.js';
+import { searchAutomationLogsTool, handleSearchAutomationLogs } from './tools/automations/search-automation-logs.js';
 
 // Automation visibility (Phase 5)
-import { getFailedAutomationsTool, handleGetFailedAutomations } from './tools/get-failed-automations.js';
-import { getAutomationStatsTool, handleGetAutomationStats } from './tools/get-automation-stats.js';
-import { getAutomationLogDetailTool, handleGetAutomationLogDetail } from './tools/get-automation-log-detail.js';
-import { getAutomationsForMatterTool, handleGetAutomationsForMatter } from './tools/get-automations-for-matter.js';
+import { getFailedAutomationsTool, handleGetFailedAutomations } from './tools/automations/get-failed-automations.js';
+import { getAutomationStatsTool, handleGetAutomationStats } from './tools/automations/get-automation-stats.js';
+import { getAutomationLogDetailTool, handleGetAutomationLogDetail } from './tools/automations/get-automation-log-detail.js';
+import { getAutomationsForMatterTool, handleGetAutomationsForMatter } from './tools/automations/get-automations-for-matter.js';
 
 // State automations via automation_logs (Phase 6)
-import { searchStateAutomationsTool, handleSearchStateAutomations } from './tools/search-state-automations.js';
-import { getInstanceTimelineTool, handleGetInstanceTimeline } from './tools/get-instance-timeline.js';
-import { getFailedStateActionsTool, handleGetFailedStateActions } from './tools/get-failed-state-actions.js';
+import { searchStateAutomationsTool, handleSearchStateAutomations } from './tools/automations/search-state-automations.js';
+import { getInstanceTimelineTool, handleGetInstanceTimeline } from './tools/automations/get-instance-timeline.js';
+import { getFailedStateActionsTool, handleGetFailedStateActions } from './tools/automations/get-failed-state-actions.js';
 
 // System tickets (Phase 1)
-import { searchSystemTicketsTool, handleSearchSystemTickets } from './tools/search-system-tickets.js';
-import { getSystemTicketTool, handleGetSystemTicket } from './tools/get-system-ticket.js';
-import { getOpenTicketsSummaryTool, handleGetOpenTicketsSummary } from './tools/get-open-tickets-summary.js';
-import { getSystemTicketDiagnosticsTool, handleGetSystemTicketDiagnostics } from './tools/get-system-ticket-diagnostics.js';
-import { markTicketInProgressTool, handleMarkTicketInProgress } from './tools/mark-ticket-in-progress.js';
-import { markTicketDeferredTool, handleMarkTicketDeferred } from './tools/mark-ticket-deferred.js';
-import { getTicketThreadTool, handleGetTicketThread } from './tools/get-ticket-thread.js';
+import { searchSystemTicketsTool, handleSearchSystemTickets } from './tools/tickets/search-system-tickets.js';
+import { getSystemTicketTool, handleGetSystemTicket } from './tools/tickets/get-system-ticket.js';
+import { getOpenTicketsSummaryTool, handleGetOpenTicketsSummary } from './tools/tickets/get-open-tickets-summary.js';
+import { getSystemTicketDiagnosticsTool, handleGetSystemTicketDiagnostics } from './tools/tickets/get-system-ticket-diagnostics.js';
+import { markTicketInProgressTool, handleMarkTicketInProgress } from './tools/tickets/mark-ticket-in-progress.js';
+import { markTicketDeferredTool, handleMarkTicketDeferred } from './tools/tickets/mark-ticket-deferred.js';
+import { getTicketThreadTool, handleGetTicketThread } from './tools/tickets/get-ticket-thread.js';
 
 // Cross-collection intelligence (Phase 3)
-import { investigateTicketTool, handleInvestigateTicket } from './tools/investigate-ticket.js';
-import { getSystemHealthTool, handleGetSystemHealth } from './tools/get-system-health.js';
-import { traceMatterActivityTool, handleTraceMatterActivity } from './tools/trace-matter-activity.js';
-import { findRelatedErrorsTool, handleFindRelatedErrors } from './tools/find-related-errors.js';
+import { investigateTicketTool, handleInvestigateTicket } from './tools/tickets/investigate-ticket.js';
+import { getSystemHealthTool, handleGetSystemHealth } from './tools/system/get-system-health.js';
+import { traceMatterActivityTool, handleTraceMatterActivity } from './tools/system/trace-matter-activity.js';
+import { findRelatedErrorsTool, handleFindRelatedErrors } from './tools/system/find-related-errors.js';
 
 // Queue status (Phase 7)
-import { getQueueStatusTool, handleGetQueueStatus } from './tools/get-queue-status.js';
+import { getQueueStatusTool, handleGetQueueStatus } from './tools/system/get-queue-status.js';
 
 // Matter context (Phase 8)
-import { getMatterContextTool, handleGetMatterContext } from './tools/get-matter-context.js';
-import { getMatterDocumentsStatusTool, handleGetMatterDocumentsStatus } from './tools/get-matter-documents-status.js';
-import { getMatterOutstandingItemsTool, handleGetMatterOutstandingItems } from './tools/get-matter-outstanding-items.js';
-import { getMatterEventsTool, handleGetMatterEvents } from './tools/get-matter-events.js';
-import { getMatterBillingTool, handleGetMatterBilling } from './tools/get-matter-billing.js';
+import { getMatterContextTool, handleGetMatterContext } from './tools/matters/get-matter-context.js';
+import { getMatterDocumentsStatusTool, handleGetMatterDocumentsStatus } from './tools/matters/get-matter-documents-status.js';
+import { getMatterOutstandingItemsTool, handleGetMatterOutstandingItems } from './tools/matters/get-matter-outstanding-items.js';
+import { getMatterEventsTool, handleGetMatterEvents } from './tools/matters/get-matter-events.js';
+import { getMatterBillingTool, handleGetMatterBilling } from './tools/matters/get-matter-billing.js';
 
 // Workflow configuration (Phase 9)
-import { getStepConfigTool, handleGetStepConfig } from './tools/get-step-config.js';
-import { getCategoryConfigTool, handleGetCategoryConfig } from './tools/get-category-config.js';
-import { getWorkflowStatesTool, handleGetWorkflowStates } from './tools/get-workflow-states.js';
-import { getAutomationTemplateTool, handleGetAutomationTemplate } from './tools/get-automation-template.js';
-import { getWorkflowOverviewTool, handleGetWorkflowOverview } from './tools/get-workflow-overview.js';
+import { getStepConfigTool, handleGetStepConfig } from './tools/workflow/get-step-config.js';
+import { getCategoryConfigTool, handleGetCategoryConfig } from './tools/workflow/get-category-config.js';
+import { getWorkflowStatesTool, handleGetWorkflowStates } from './tools/workflow/get-workflow-states.js';
+import { getAutomationTemplateTool, handleGetAutomationTemplate } from './tools/workflow/get-automation-template.js';
+import { getWorkflowOverviewTool, handleGetWorkflowOverview } from './tools/workflow/get-workflow-overview.js';
 
 // Search (Phase 13)
-import { searchMattersTool, handleSearchMatters } from './tools/search-matters.js';
+import { searchMattersTool, handleSearchMatters } from './tools/matters/search-matters.js';
 
 // Attachments (Phase 12)
-import { getAttachmentTool, handleGetAttachment } from './tools/get-attachment.js';
+import { getAttachmentTool, handleGetAttachment } from './tools/matters/get-attachment.js';
 
 // Outstanding items (Phase 11)
-import { getOutstandingItemDetailTool, handleGetOutstandingItemDetail } from './tools/get-outstanding-item-detail.js';
-import { searchOutstandingItemsTool, handleSearchOutstandingItems } from './tools/search-outstanding-items.js';
-import { getOutstandingItemTemplateTool, handleGetOutstandingItemTemplate } from './tools/get-outstanding-item-template.js';
-import { getStepOutstandingItemTemplatesTool, handleGetStepOutstandingItemTemplates } from './tools/get-step-outstanding-item-templates.js';
-import { getFollowUpStatusTool, handleGetFollowUpStatus } from './tools/get-follow-up-status.js';
+import { getOutstandingItemDetailTool, handleGetOutstandingItemDetail } from './tools/outstanding-items/get-outstanding-item-detail.js';
+import { searchOutstandingItemsTool, handleSearchOutstandingItems } from './tools/outstanding-items/search-outstanding-items.js';
+import { getOutstandingItemTemplateTool, handleGetOutstandingItemTemplate } from './tools/outstanding-items/get-outstanding-item-template.js';
+import { getStepOutstandingItemTemplatesTool, handleGetStepOutstandingItemTemplates } from './tools/outstanding-items/get-step-outstanding-item-templates.js';
+import { getFollowUpStatusTool, handleGetFollowUpStatus } from './tools/outstanding-items/get-follow-up-status.js';
 
 // Diagnostics (Phase 10)
-import { diagnoseMatterStepTool, handleDiagnoseMatterStep } from './tools/diagnose-matter-step.js';
-import { checkAutomationEligibilityTool, handleCheckAutomationEligibility } from './tools/check-automation-eligibility.js';
+import { diagnoseMatterStepTool, handleDiagnoseMatterStep } from './tools/matters/diagnose-matter-step.js';
+import { checkAutomationEligibilityTool, handleCheckAutomationEligibility } from './tools/matters/check-automation-eligibility.js';
 
 // Events & time entries (Phase 14)
-import { searchEventsTool, handleSearchEvents } from './tools/search-events.js';
-import { getEventDetailTool, handleGetEventDetail } from './tools/get-event-detail.js';
-import { searchTimeEntriesTool, handleSearchTimeEntries } from './tools/search-time-entries.js';
-import { getTimeEntryDetailTool, handleGetTimeEntryDetail } from './tools/get-time-entry-detail.js';
-import { getMatterBillingActivityTool, handleGetMatterBillingActivity } from './tools/get-matter-billing-activity.js';
-import { getEventTimeEntriesTool, handleGetEventTimeEntries } from './tools/get-event-time-entries.js';
+import { searchEventsTool, handleSearchEvents } from './tools/events/search-events.js';
+import { getEventDetailTool, handleGetEventDetail } from './tools/events/get-event-detail.js';
+import { searchTimeEntriesTool, handleSearchTimeEntries } from './tools/events/search-time-entries.js';
+import { getTimeEntryDetailTool, handleGetTimeEntryDetail } from './tools/events/get-time-entry-detail.js';
+import { getMatterBillingActivityTool, handleGetMatterBillingActivity } from './tools/events/get-matter-billing-activity.js';
+import { getEventTimeEntriesTool, handleGetEventTimeEntries } from './tools/events/get-event-time-entries.js';
 
 // BK docket verification (Phase 15)
-import { getDocketEntriesTool, handleGetDocketEntries } from './tools/get-docket-entries.js';
-import { getDocketEntryDetailTool, handleGetDocketEntryDetail } from './tools/get-docket-entry-detail.js';
-import { getDocketPatternRulesTool, handleGetDocketPatternRules } from './tools/get-docket-pattern-rules.js';
-import { verifyDocketActionsTool, handleVerifyDocketActions } from './tools/verify-docket-actions.js';
-import { traceDocketToEventsTool, handleTraceDocketToEvents } from './tools/trace-docket-to-events.js';
+import { getDocketEntriesTool, handleGetDocketEntries } from './tools/docket/get-docket-entries.js';
+import { getDocketEntryDetailTool, handleGetDocketEntryDetail } from './tools/docket/get-docket-entry-detail.js';
+import { getDocketPatternRulesTool, handleGetDocketPatternRules } from './tools/docket/get-docket-pattern-rules.js';
+import { verifyDocketActionsTool, handleVerifyDocketActions } from './tools/docket/verify-docket-actions.js';
+import { traceDocketToEventsTool, handleTraceDocketToEvents } from './tools/docket/trace-docket-to-events.js';
 
 // Call center investigation (Phase 16)
-import { searchCallsTool, handleSearchCalls } from './tools/search-calls.js';
-import { getCallDetailTool, handleGetCallDetail } from './tools/get-call-detail.js';
-import { getCallRoutingTraceTool, handleGetCallRoutingTrace } from './tools/get-call-routing-trace.js';
-import { getCallTimelineTool, handleGetCallTimeline } from './tools/get-call-timeline.js';
-import { getPhoneNumberConfigTool, handleGetPhoneNumberConfig } from './tools/get-phone-number-config.js';
-import { getCallFlowConfigTool, handleGetCallFlowConfig } from './tools/get-call-flow-config.js';
-import { searchCallFlowsTool, handleSearchCallFlows } from './tools/search-call-flows.js';
-import { getCallQueueConfigTool, handleGetCallQueueConfig } from './tools/get-call-queue-config.js';
-import { getCallOffersTool, handleGetCallOffers } from './tools/get-call-offers.js';
-import { getCallQueueEntriesTool, handleGetCallQueueEntries } from './tools/get-call-queue-entries.js';
-import { getAgentCallStatusTool, handleGetAgentCallStatus } from './tools/get-agent-call-status.js';
-import { getCallHandleTimesTool, handleGetCallHandleTimes } from './tools/get-call-handle-times.js';
-import { getCallVoicemailsTool, handleGetCallVoicemails } from './tools/get-call-voicemails.js';
-import { getCallHoldEventsTool, handleGetCallHoldEvents } from './tools/get-call-hold-events.js';
-import { getCallTranscriptionTool, handleGetCallTranscription } from './tools/get-call-transcription.js';
-import { getCallQualityMetricsTool, handleGetCallQualityMetrics } from './tools/get-call-quality-metrics.js';
+import { searchCallsTool, handleSearchCalls } from './tools/calls/search-calls.js';
+import { getCallDetailTool, handleGetCallDetail } from './tools/calls/get-call-detail.js';
+import { getCallRoutingTraceTool, handleGetCallRoutingTrace } from './tools/calls/get-call-routing-trace.js';
+import { getCallTimelineTool, handleGetCallTimeline } from './tools/calls/get-call-timeline.js';
+import { getPhoneNumberConfigTool, handleGetPhoneNumberConfig } from './tools/calls/get-phone-number-config.js';
+import { getCallFlowConfigTool, handleGetCallFlowConfig } from './tools/calls/get-call-flow-config.js';
+import { searchCallFlowsTool, handleSearchCallFlows } from './tools/calls/search-call-flows.js';
+import { getCallQueueConfigTool, handleGetCallQueueConfig } from './tools/calls/get-call-queue-config.js';
+import { getCallOffersTool, handleGetCallOffers } from './tools/calls/get-call-offers.js';
+import { getCallQueueEntriesTool, handleGetCallQueueEntries } from './tools/calls/get-call-queue-entries.js';
+import { getAgentCallStatusTool, handleGetAgentCallStatus } from './tools/calls/get-agent-call-status.js';
+import { getCallHandleTimesTool, handleGetCallHandleTimes } from './tools/calls/get-call-handle-times.js';
+import { getCallVoicemailsTool, handleGetCallVoicemails } from './tools/calls/get-call-voicemails.js';
+import { getCallHoldEventsTool, handleGetCallHoldEvents } from './tools/calls/get-call-hold-events.js';
+import { getCallTranscriptionTool, handleGetCallTranscription } from './tools/calls/get-call-transcription.js';
+import { getCallQualityMetricsTool, handleGetCallQualityMetrics } from './tools/calls/get-call-quality-metrics.js';
 
 // Changelog (Phase 17)
-import { createChangelogEntryTool, handleCreateChangelogEntry } from './tools/create-changelog-entry.js';
-import { queryChangelogEntriesTool, handleQueryChangelogEntries } from './tools/query-changelog-entries.js';
+import { createChangelogEntryTool, handleCreateChangelogEntry } from './tools/changelog/create-changelog-entry.js';
+import { queryChangelogEntriesTool, handleQueryChangelogEntries } from './tools/changelog/query-changelog-entries.js';
 
 // Contact resolution & user activity (Phase 18)
-import { findContactsByPhoneTool, handleFindContactsByPhone } from './tools/find-contacts-by-phone.js';
-import { getLogsByUserTool, handleGetLogsByUser } from './tools/get-logs-by-user.js';
+import { findContactsByPhoneTool, handleFindContactsByPhone } from './tools/matters/find-contacts-by-phone.js';
+import { getLogsByUserTool, handleGetLogsByUser } from './tools/logs/get-logs-by-user.js';
 
 // Payments (Phase 19)
-import { searchPaymentsTool, handleSearchPayments } from './tools/search-payments.js';
-import { getPaymentDetailTool, handleGetPaymentDetail } from './tools/get-payment-detail.js';
-import { searchPaymentPlansTool, handleSearchPaymentPlans } from './tools/search-payment-plans.js';
-import { getPaymentPlanDetailTool, handleGetPaymentPlanDetail } from './tools/get-payment-plan-detail.js';
-import { searchPaymentMethodsTool, handleSearchPaymentMethods } from './tools/search-payment-methods.js';
-import { getPaymentMethodDetailTool, handleGetPaymentMethodDetail } from './tools/get-payment-method-detail.js';
-import { getMatterPaymentsSummaryTool, handleGetMatterPaymentsSummary } from './tools/get-matter-payments-summary.js';
-import { getPaymentProcessorStatsTool, handleGetPaymentProcessorStats } from './tools/get-payment-processor-stats.js';
-import { searchPaymentWebhookEventsTool, handleSearchPaymentWebhookEvents } from './tools/search-payment-webhook-events.js';
-import { getPaymentWebhookEventDetailTool, handleGetPaymentWebhookEventDetail } from './tools/get-payment-webhook-event-detail.js';
-import { searchPaymentTrustEntriesTool, handleSearchPaymentTrustEntries } from './tools/search-payment-trust-entries.js';
+import { searchPaymentsTool, handleSearchPayments } from './tools/payments/search-payments.js';
+import { getPaymentDetailTool, handleGetPaymentDetail } from './tools/payments/get-payment-detail.js';
+import { searchPaymentPlansTool, handleSearchPaymentPlans } from './tools/payments/search-payment-plans.js';
+import { getPaymentPlanDetailTool, handleGetPaymentPlanDetail } from './tools/payments/get-payment-plan-detail.js';
+import { searchPaymentMethodsTool, handleSearchPaymentMethods } from './tools/payments/search-payment-methods.js';
+import { getPaymentMethodDetailTool, handleGetPaymentMethodDetail } from './tools/payments/get-payment-method-detail.js';
+import { getMatterPaymentsSummaryTool, handleGetMatterPaymentsSummary } from './tools/payments/get-matter-payments-summary.js';
+import { getPaymentProcessorStatsTool, handleGetPaymentProcessorStats } from './tools/payments/get-payment-processor-stats.js';
+import { searchPaymentWebhookEventsTool, handleSearchPaymentWebhookEvents } from './tools/payments/search-payment-webhook-events.js';
+import { getPaymentWebhookEventDetailTool, handleGetPaymentWebhookEventDetail } from './tools/payments/get-payment-webhook-event-detail.js';
+import { searchPaymentTrustEntriesTool, handleSearchPaymentTrustEntries } from './tools/payments/search-payment-trust-entries.js';
+import { analyzeCollectionsHealthTool, handleAnalyzeCollectionsHealth } from './tools/payments/analyze-collections-health.js';
+import { analyzeChapter7CollectionsTool, handleAnalyzeChapter7Collections } from './tools/payments/analyze-chapter7-collections.js';
+import { analyzePlanCollectionTailTool, handleAnalyzePlanCollectionTail } from './tools/payments/analyze-plan-collection-tail.js';
+import { getMatterInvoicesTool, handleGetMatterInvoices } from './tools/payments/get-matter-invoices.js';
 
 // BK docket parser (Phase 20)
-import { describeDocketParserTool, handleDescribeDocketParser } from './tools/describe-docket-parser.js';
-import { searchDocketPatternsTool, handleSearchDocketPatterns } from './tools/search-docket-patterns.js';
-import { getDocketParserStatsTool, handleGetDocketParserStats } from './tools/get-docket-parser-stats.js';
-import { explainDocketEntryTool, handleExplainDocketEntry } from './tools/explain-docket-entry.js';
+import { describeDocketParserTool, handleDescribeDocketParser } from './tools/docket/describe-docket-parser.js';
+import { searchDocketPatternsTool, handleSearchDocketPatterns } from './tools/docket/search-docket-patterns.js';
+import { getDocketParserStatsTool, handleGetDocketParserStats } from './tools/docket/get-docket-parser-stats.js';
+import { explainDocketEntryTool, handleExplainDocketEntry } from './tools/docket/explain-docket-entry.js';
 
 class SassLogsServer {
     constructor() {
@@ -293,6 +297,10 @@ class SassLogsServer {
             searchPaymentWebhookEventsTool,
             getPaymentWebhookEventDetailTool,
             searchPaymentTrustEntriesTool,
+            analyzeCollectionsHealthTool,
+            analyzeChapter7CollectionsTool,
+            analyzePlanCollectionTailTool,
+            getMatterInvoicesTool,
             // BK docket parser (Phase 20)
             describeDocketParserTool,
             searchDocketPatternsTool,
@@ -420,6 +428,10 @@ class SassLogsServer {
             'search_payment_webhook_events': handleSearchPaymentWebhookEvents,
             'get_payment_webhook_event_detail': handleGetPaymentWebhookEventDetail,
             'search_payment_trust_entries': handleSearchPaymentTrustEntries,
+            'analyze_collections_health': handleAnalyzeCollectionsHealth,
+            'analyze_chapter7_collections': handleAnalyzeChapter7Collections,
+            'analyze_plan_collection_tail': handleAnalyzePlanCollectionTail,
+            'get_matter_invoices': handleGetMatterInvoices,
             // BK docket parser (Phase 20)
             'describe_docket_parser': handleDescribeDocketParser,
             'search_docket_patterns': handleSearchDocketPatterns,

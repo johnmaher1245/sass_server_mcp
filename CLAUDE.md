@@ -9,15 +9,27 @@ server_mcp/
 ├── index.js              # Entry point — imports, tool/handler registration, server setup
 ├── config/config.js      # Collection names, projections, limits
 ├── services/
-│   ├── mongodb.js        # All database query methods (~3600 lines)
+│   ├── mongodb.js        # Singleton: constructor (collection refs), connect/close,
+│   │                     #   shared helpers, then Object.assign(prototype, ...query mixins)
+│   ├── queries/          # Query methods split by domain, one file per domain
+│   │   └── {domain}.js   #   `export default { ...method-shorthand functions }`,
+│   │                     #   mixed onto MongoDBService.prototype (so `this` works)
 │   └── s3.js             # S3 file downloads (attachments)
-└── tools/                # 63 tool files (one per tool)
-    └── {tool-name}.js    # Tool schema + handler function
+└── tools/                # 105 tool files, grouped into domain folders
+    └── {domain}/         #   logs, dry-runs, automations, tickets, system, matters,
+        └── {tool}.js     #   workflow, outstanding-items, events, docket, calls,
+                          #   changelog, payments
 ```
+
+**Domain layout is mirrored:** the query methods for a tool in `tools/<domain>/` live in
+`services/queries/<domain>.js`. The 13 domains are the same on both sides. `mongodb.js`
+owns the connection + shared primitives (`_matterFilter`, `_resolveNames`, `_safeLimit`,
+`_isoTo*`, `_findContactIds`, `_resolvePhoneToContact`, etc.); every domain mixin lands on
+the one prototype, so cross-domain helper calls still resolve via `this`.
 
 ## Adding a New Tool
 
-Four files to touch, always in this order:
+Pick the `<domain>` the tool belongs to (see the folder list above). Four files to touch:
 
 ### 1. `config/config.js` — Add collection (if new)
 ```javascript
@@ -26,17 +38,27 @@ collections: {
 }
 ```
 
-### 2. `services/mongodb.js` — Add collection ref + query method
+### 2. Add the query method in two places
 
-**Constructor** — add `this.myNewCollection = null;`
+**`services/mongodb.js`** — collection ref only:
+- **Constructor** — add `this.myNewCollection = null;`
+- **connect()** — add `this.myNewCollection = this.db.collection(config.collections.myNewCollection);`
 
-**connect()** — add `this.myNewCollection = this.db.collection(config.collections.myNewCollection);`
-
-**Query method** — add `async myToolMethod({ arg1, arg2 }) { ... }` following the patterns below.
-
-### 3. `tools/{tool-name}.js` — Create tool file
+**`services/queries/<domain>.js`** — the query method itself, as an object property
+(method shorthand, comma-separated). `this` binds to the singleton at call time, so use
+`this.myNewCollection`, `this._matterFilter(...)`, etc. just as before:
 ```javascript
-import mongoService from '../services/mongodb.js';
+export default {
+    // ...existing methods,
+    async myToolMethod({ arg1, arg2 }) { /* ... */ },
+};
+```
+If the file needs `ObjectId`/`config`/docket constants, they're imported at the top of each
+domain file (not inherited from `mongodb.js`). Add the import if it's not already there.
+
+### 3. `tools/<domain>/{tool-name}.js` — Create tool file
+```javascript
+import mongoService from '../../services/mongodb.js';   // note: ../../ from inside a domain folder
 
 export const myToolTool = {
     name: 'my_tool',                    // snake_case, matches handler key
@@ -60,10 +82,9 @@ export async function handleMyTool(args) {
 
 ### 4. `index.js` — Register
 
-**Import** (grouped by phase):
+**Import** (grouped by phase/domain):
 ```javascript
-// My feature (Phase N)
-import { myToolTool, handleMyTool } from './tools/my-tool.js';
+import { myToolTool, handleMyTool } from './tools/<domain>/my-tool.js';
 ```
 
 **this.tools array** — add `myToolTool,` with phase comment

@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import mongoService from '../services/mongodb.js';
-import { describeDocketParserTool, handleDescribeDocketParser } from '../tools/describe-docket-parser.js';
-import { searchDocketPatternsTool, handleSearchDocketPatterns } from '../tools/search-docket-patterns.js';
-import { getDocketParserStatsTool, handleGetDocketParserStats } from '../tools/get-docket-parser-stats.js';
-import { explainDocketEntryTool, handleExplainDocketEntry } from '../tools/explain-docket-entry.js';
+import { describeDocketParserTool, handleDescribeDocketParser } from '../tools/docket/describe-docket-parser.js';
+import { searchDocketPatternsTool, handleSearchDocketPatterns } from '../tools/docket/search-docket-patterns.js';
+import { getDocketParserStatsTool, handleGetDocketParserStats } from '../tools/docket/get-docket-parser-stats.js';
+import { explainDocketEntryTool, handleExplainDocketEntry } from '../tools/docket/explain-docket-entry.js';
 
 const cases = [
     ['describe_docket_parser', describeDocketParserTool, handleDescribeDocketParser, []],

@@ -59,6 +59,7 @@ export const config = {
         paymentWebhookEvents: 'payment_webhook_events',
         paymentTrustEntries: 'payment_trust_entries',
         companies: 'companies',
+        invoices: 'invoices',
     },
 
     defaultLimit: 50,
