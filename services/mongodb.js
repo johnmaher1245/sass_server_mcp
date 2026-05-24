@@ -297,7 +297,10 @@ class MongoDBService {
 
     async _resolveNames(collection, ids, fields = { name: 1 }) {
         if (!ids || ids.length === 0) return {};
-        const objectIds = ids.filter(id => id).map(id => new ObjectId(id));
+        // ids may include event-derived strings (e.g. a conference participant label that
+        // isn't a Mongo user id); skip anything that isn't castable so one bad value can't
+        // crash the whole query — unresolved ids fall back to their raw string at the call site.
+        const objectIds = ids.filter(id => id && ObjectId.isValid(id)).map(id => new ObjectId(id));
         const docs = await collection.find({ _id: { $in: objectIds } }, { projection: { ...fields, _id: 1 } }).toArray();
         const map = {};
         for (const doc of docs) map[doc._id.toString()] = doc;

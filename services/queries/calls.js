@@ -16,6 +16,112 @@ export default {
         return ids;
     },
 
+    // Effective end (Unix seconds) of a call for overlap math. A call that connected
+    // uses its real end (or start+duration); a never-connected leg (in_progress /
+    // duration 0) is assumed live for `grace` seconds so a stuck ring still counts as
+    // overlapping a concurrent live call.
+    _effectiveCallEnd(c, grace) {
+        if (c.end && c.end > (c.start || 0)) return c.end;
+        if (c.duration && c.duration > 0) return (c.start || 0) + c.duration;
+        return (c.start || 0) + grace;
+    },
+
+    // Pure overlap clusterer. `grouped` is [{ _id: contactId, calls: [...] }]; returns the
+    // subset of contacts' calls whose active windows overlap (the redial-collision signature
+    // behind contact-keyed conference rooms). Each returned cluster is enriched with the set of
+    // distinct agent ids and a count of calls that reached an agent leg.
+    _findConcurrentClusters(grouped, grace) {
+        const clusters = [];
+        for (const g of grouped) {
+            const calls = (g.calls || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0));
+            if (calls.length < 2) continue;
+            let cluster = [calls[0]];
+            let maxEnd = this._effectiveCallEnd(calls[0], grace);
+            const flush = () => {
+                if (cluster.length > 1) {
+                    const agents = new Set();
+                    let connected = 0;
+                    for (const c of cluster) {
+                        const legUsers = (c.call_legs || []).map(l => l.user).filter(Boolean);
+                        if (legUsers.length) connected++;
+                        for (const u of legUsers) agents.add(u.toString());
+                    }
+                    clusters.push({ contact: g._id, calls: cluster, agents, connected_call_count: connected });
+                }
+            };
+            for (let i = 1; i < calls.length; i++) {
+                const c = calls[i];
+                if ((c.start || 0) <= maxEnd) {
+                    cluster.push(c);
+                    maxEnd = Math.max(maxEnd, this._effectiveCallEnd(c, grace));
+                } else {
+                    flush();
+                    cluster = [c];
+                    maxEnd = this._effectiveCallEnd(c, grace);
+                }
+            }
+            flush();
+        }
+        return clusters;
+    },
+
+    // Parse a call's `events` array into per-user conference presence and classify the
+    // crossing. The defining signal of a true crossing (vs a legitimate warm transfer): a
+    // user "Entered into the contact conference" who has NO call_leg on this call — i.e. an
+    // agent servicing a *different* call landed in this contact's room (transfers always give
+    // the second agent a leg, so they don't trip this). `simultaneous_foreign` is the
+    // audio-exposure subset: a foreign user was present at the same instant as another
+    // participant. Event-derived, so it survives orphaned legs that never persist conference_sid.
+    // `legUserIds` is this call's call_legs.user set (strings). Event timestamps are compared
+    // only against each other, so their unit (s vs ms) doesn't matter as long as it's consistent.
+    //
+    // Non-ObjectId participant labels (e.g. `user:undefined`, emitted for warm-transfer TARGETS
+    // during the ~Feb 8 → Apr 1 2026 deploy) are NOT identifiable agents — the real transfer
+    // target still has a call_leg, so the mislabeled conference-entry is a labeling artifact, not
+    // a foreign agent. Counting it produces false-positive crossings, so such labels are dropped
+    // from presence accounting and surfaced separately as `artifact_entrant_labels`.
+    _parseConferencePresence(events, legUserIds) {
+        const legSet = new Set((legUserIds || []).map(String));
+        const isHexId = (s) => typeof s === 'string' && /^[0-9a-fA-F]{24}$/.test(s);
+        const ENTER = 'Entered into the contact conference';
+        const isExit = (s) => typeof s === 'string' && s.startsWith('Exited the contact conference');
+        const artifactLabels = new Set();
+        const pts = (events || [])
+            .filter(e => typeof e.participant === 'string' && e.participant.startsWith('user:'))
+            .map(e => ({ user: e.participant.slice(5), ts: e.timestamp || 0, type: e.event === ENTER ? 'enter' : (isExit(e.event) ? 'exit' : 'other') }))
+            .filter(e => e.type !== 'other')
+            // Drop non-ObjectId labels (transfer-target artifacts like "user:undefined"); record
+            // the raw label so the data-quality signal stays visible instead of silently masked.
+            .filter(e => { if (isHexId(e.user)) return true; artifactLabels.add(e.user); return false; })
+            // At an identical timestamp process exits before enters so a clean handoff
+            // (one agent out, next in) isn't miscounted as simultaneous presence.
+            .sort((a, b) => (a.ts - b.ts) || (a.type === 'exit' ? -1 : 1));
+
+        const entrantUsers = new Set();
+        const open = new Map(); // user -> open-interval depth (handles re-entries)
+        let maxConcurrent = 0;
+        let simultaneousForeign = false;
+        for (const e of pts) {
+            if (e.type === 'enter') {
+                entrantUsers.add(e.user);
+                open.set(e.user, (open.get(e.user) || 0) + 1);
+            } else if (open.get(e.user)) {
+                open.set(e.user, open.get(e.user) - 1);
+            }
+            const live = [...open.keys()].filter(u => open.get(u) > 0);
+            if (live.length > maxConcurrent) maxConcurrent = live.length;
+            if (live.length >= 2 && live.some(u => !legSet.has(u))) simultaneousForeign = true;
+        }
+        const foreign = [...entrantUsers].filter(u => !legSet.has(u));
+        return {
+            entrant_user_ids: [...entrantUsers],
+            foreign_user_ids: foreign,
+            artifact_entrant_labels: [...artifactLabels],
+            max_concurrent_users: maxConcurrent,
+            simultaneous_foreign: simultaneousForeign,
+        };
+    },
+
     // ── Call Center Investigation (Phase 16) ──
     async searchCalls({ phone: phoneFilter, contact_id, matter_id, division_id, call_queue_id, user_id, status, direction, after_hours, has_user, sofia, start_date, end_date, limit, offset }) {
         await this.ensureConnection();
@@ -1147,6 +1253,227 @@ export default {
             },
             legs,
             overall_quality: legs.length > 0 ? worstOverall : 'no_data',
+        };
+    },
+
+    // Quantify the contact-keyed-conference crossing defect across a window/scope.
+    // Three complementary detectors:
+    //  1. concurrent_call_events — clusters of 2+ calls from the SAME contact whose active
+    //     windows overlap (the redial-collision signature). multi_agent_events is the subset
+    //     where 2+ distinct agents were bridged — the confidentiality-exposure metric.
+    //  2. shared_conference_groups — distinct Twilio conference_sids attached to >1 call record
+    //     (gold-standard crossing, but many orphaned legs never persist conference_sid).
+    //  3. orphaned_in_progress_calls — lifecycle-corrupted calls stuck at status:in_progress
+    //     (the cleanup/backfill list), bucketed by month.
+    async analyzeCrossedCalls({ start_date, end_date, division_id, company_id, grace_seconds, sample_size }) {
+        await this.ensureConnection();
+
+        const endSec = end_date ? this._isoToSeconds(end_date) : Math.floor(Date.now() / 1000);
+        const startSec = start_date ? this._isoToSeconds(start_date) : endSec - 120 * 24 * 3600;
+        const grace = (typeof grace_seconds === 'number' && grace_seconds >= 0) ? grace_seconds : 120;
+        const sampleN = this._safeLimit(sample_size || 20);
+
+        const scope = { created_at: { $gte: startSec, $lte: endSec } };
+        if (division_id) scope.division = new ObjectId(division_id);
+        if (company_id) scope.company = new ObjectId(company_id);
+
+        const leanProj = {
+            contact: 1, start: 1, end: 1, duration: 1, status: 1,
+            conference_sid: 1, has_user: 1, call_queue: 1, direction: 1,
+            'call_legs.user': 1,
+        };
+
+        // Detector 1 — contacts with 2+ calls in window; overlap clustering done in JS.
+        const grouped = await this.calls.aggregate([
+            { $match: scope },
+            { $project: leanProj },
+            { $group: { _id: '$contact', calls: { $push: '$$ROOT' }, n: { $sum: 1 } } },
+            { $match: { n: { $gt: 1 } } },
+        ], { allowDiskUse: true }).toArray();
+
+        const clusters = this._findConcurrentClusters(grouped, grace);
+        const multiAgentEvents = clusters.filter(c => c.agents.size >= 2).length;
+        const twoConnectedEvents = clusters.filter(c => c.connected_call_count >= 2).length;
+
+        // Detector 2 — shared conference_sid across distinct call _ids.
+        const sharedConf = await this.calls.aggregate([
+            { $match: { ...scope, conference_sid: { $type: 'string', $ne: '' } } },
+            { $group: { _id: '$conference_sid', call_ids: { $addToSet: '$_id' }, contacts: { $addToSet: '$contact' } } },
+            { $project: { n: { $size: '$call_ids' }, call_ids: 1, contacts: 1 } },
+            { $match: { n: { $gt: 1 } } },
+            { $sort: { n: -1 } },
+        ], { allowDiskUse: true }).toArray();
+
+        // Detector 3 — orphaned in_progress calls (lifecycle corruption / backfill list).
+        const orphans = await this.calls.aggregate([
+            { $match: { ...scope, status: 'in_progress' } },
+            { $project: { start: 1, has_user: 1 } },
+            { $sort: { start: 1 } },
+        ], { allowDiskUse: true }).toArray();
+        const orphanByMonth = {};
+        for (const o of orphans) {
+            const m = new Date((o.start || 0) * 1000).toISOString().slice(0, 7);
+            orphanByMonth[m] = (orphanByMonth[m] || 0) + 1;
+        }
+
+        // Detector 4 — CONFIRMED crossings from the events array (the accurate exposure metric).
+        // A foreign agent (entered the contact conference but has no call_leg on this call) means
+        // an agent from a *different* call landed in this contact's room. Computed server-side to
+        // bound the result set to real crossings only; events are then parsed in JS for the
+        // simultaneous-presence (audio-exposure) subset. Legit warm transfers don't match because
+        // the transferred-to agent gets a leg here.
+        // A 24-hex regex separates real user ids from non-ObjectId participant labels
+        // (e.g. "user:undefined", emitted for warm-transfer targets during the ~Feb 8 → Apr 1
+        // 2026 deploy). Only valid ids are real foreign agents; the rest are labeling artifacts
+        // — counting them as crossings is a false positive. Mirrors `_parseConferencePresence`.
+        const HEX24 = '^[0-9a-fA-F]{24}$';
+        const isHex = (val) => ({ $regexMatch: { input: { $ifNull: [val, ''] }, regex: HEX24 } });
+        const crossingBase = [
+            { $match: scope },
+            { $addFields: {
+                _leg_users: { $setUnion: [[], { $map: {
+                    input: { $filter: { input: { $ifNull: ['$call_legs', []] }, as: 'l', cond: { $ne: [{ $ifNull: ['$$l.user', null] }, null] } } },
+                    as: 'l', in: { $toString: '$$l.user' },
+                } }] },
+                _entrant_users: { $setUnion: [[], { $map: {
+                    input: { $filter: { input: { $ifNull: ['$events', []] }, as: 'e', cond: { $and: [
+                        { $eq: ['$$e.event', 'Entered into the contact conference'] },
+                        { $eq: [{ $substrCP: [{ $ifNull: ['$$e.participant', ''] }, 0, 5] }, 'user:'] },
+                    ] } } },
+                    as: 'e', in: { $arrayElemAt: [{ $split: [{ $ifNull: ['$$e.participant', ''] }, ':'] }, 1] },
+                } }] },
+            } },
+            { $addFields: { _foreign_all: { $setDifference: ['$_entrant_users', '$_leg_users'] } } },
+            { $addFields: {
+                // Real foreign agents: 24-hex Mongo user ids only.
+                _foreign_users: { $filter: { input: '$_foreign_all', as: 'u', cond: isHex('$$u') } },
+                // Non-ObjectId entrant labels (transfer-target artifacts) — NOT foreign agents.
+                _artifact_users: { $filter: { input: '$_foreign_all', as: 'u', cond: { $not: [isHex('$$u')] } } },
+            } },
+        ];
+        const PARSE_CAP = 3000;
+        const hasForeign = { $match: { $expr: { $gt: [{ $size: '$_foreign_users' }, 0] } } };
+        const facetDoc = await this.calls.aggregate([
+            ...crossingBase,
+            { $facet: {
+                confirmed: [hasForeign, { $count: 'n' }],
+                artifacts: [{ $match: { $expr: { $gt: [{ $size: '$_artifact_users' }, 0] } } }, { $count: 'n' }],
+                sample: [
+                    hasForeign,
+                    { $sort: { start: -1 } },
+                    { $limit: PARSE_CAP },
+                    { $project: { contact: 1, call_queue: 1, start: 1, conference_sid: 1, status: 1, direction: 1, _foreign_users: 1, 'call_legs.user': 1, 'events.participant': 1, 'events.event': 1, 'events.timestamp': 1 } },
+                ],
+            } },
+        ], { allowDiskUse: true }).toArray();
+        const facet = facetDoc[0] || {};
+        const confirmedCrossings = facet.confirmed?.[0]?.n || 0;
+        const transferLabelArtifactCalls = facet.artifacts?.[0]?.n || 0;
+        const crossingCalls = facet.sample || [];
+
+        const crossingParsed = crossingCalls.map(c => {
+            const legUsers = (c.call_legs || []).map(l => l.user?.toString()).filter(Boolean);
+            const presence = this._parseConferencePresence(c.events, legUsers);
+            return { call: c, legUsers, presence };
+        });
+        const simultaneousCrossings = crossingParsed.filter(x => x.presence.simultaneous_foreign).length;
+
+        // Resolve names for samples only (keep resolution cheap).
+        const sampleClusters = clusters
+            .slice()
+            .sort((a, b) => (b.agents.size - a.agents.size) || (b.connected_call_count - a.connected_call_count) || (b.calls.length - a.calls.length))
+            .slice(0, sampleN);
+
+        // Confirmed-crossing samples ranked by audio exposure (simultaneous first), then concurrency.
+        const sampleCrossings = crossingParsed
+            .slice()
+            .sort((a, b) => (Number(b.presence.simultaneous_foreign) - Number(a.presence.simultaneous_foreign))
+                || (b.presence.max_concurrent_users - a.presence.max_concurrent_users)
+                || (b.presence.foreign_user_ids.length - a.presence.foreign_user_ids.length))
+            .slice(0, sampleN);
+
+        const contactIds = [...new Set([
+            ...sampleClusters.map(c => c.contact?.toString()),
+            ...sampleCrossings.map(x => x.call.contact?.toString()),
+        ].filter(Boolean))];
+        const agentIds = [...new Set([
+            ...sampleClusters.flatMap(c => [...c.agents]),
+            ...sampleCrossings.flatMap(x => [...x.presence.entrant_user_ids, ...x.legUsers]),
+        ])];
+        const queueIds = [...new Set([
+            ...sampleClusters.flatMap(c => c.calls.map(x => x.call_queue?.toString())),
+            ...sampleCrossings.map(x => x.call.call_queue?.toString()),
+        ].filter(Boolean))];
+        const [contactMap, agentMap, queueMap] = await Promise.all([
+            this._resolveNames(this.contacts, contactIds, { given_name: 1, family_name: 1, display_name: 1, phone: 1 }),
+            this._resolveNames(this.users, agentIds, { given_name: 1, family_name: 1 }),
+            this._resolveNames(this.callQueues, queueIds, { name: 1 }),
+        ]);
+        const cName = (id) => { const c = contactMap[id?.toString()]; return c ? (c.display_name || `${c.given_name || ''} ${c.family_name || ''}`.trim()) : null; };
+        const uName = (id) => { const u = agentMap[id?.toString()]; return u ? `${u.given_name || ''} ${u.family_name || ''}`.trim() : id?.toString(); };
+
+        const concurrent_event_samples = sampleClusters.map(cl => {
+            const starts = cl.calls.map(c => c.start || 0);
+            const queues = [...new Set(cl.calls.map(c => c.call_queue?.toString()).filter(Boolean))].map(q => queueMap[q]?.name || q);
+            return {
+                contact: { _id: cl.contact, name: cName(cl.contact), phone: contactMap[cl.contact?.toString()]?.phone || null },
+                call_ids: cl.calls.map(c => c._id),
+                call_count: cl.calls.length,
+                distinct_agents: [...cl.agents].map(uName),
+                agent_count: cl.agents.size,
+                connected_call_count: cl.connected_call_count,
+                queues,
+                spread_seconds: Math.max(...starts) - Math.min(...starts),
+                multi_agent_offered: cl.agents.size >= 2,
+            };
+        });
+
+        const confirmed_crossing_samples = sampleCrossings.map(x => ({
+            call_id: x.call._id,
+            contact: { _id: x.call.contact, name: cName(x.call.contact), phone: contactMap[x.call.contact?.toString()]?.phone || null },
+            queue: x.call.call_queue ? (queueMap[x.call.call_queue.toString()]?.name || x.call.call_queue) : null,
+            status: x.call.status,
+            conference_sid: x.call.conference_sid || null,
+            start: x.call.start,
+            legged_agents: x.legUsers.map(uName),
+            foreign_agents: x.presence.foreign_user_ids.map(uName),
+            max_concurrent_users: x.presence.max_concurrent_users,
+            simultaneous_audio_exposure: x.presence.simultaneous_foreign,
+        }));
+
+        return {
+            window: { start: new Date(startSec * 1000).toISOString(), end: new Date(endSec * 1000).toISOString(), grace_seconds: grace },
+            scope: { division_id: division_id || null, company_id: company_id || null },
+            summary: {
+                confirmed_crossings: confirmedCrossings,
+                simultaneous_crossings: simultaneousCrossings,
+                crossings_parsed_for_simultaneity: crossingParsed.length,
+                transfer_label_artifact_calls: transferLabelArtifactCalls,
+                concurrent_call_events: clusters.length,
+                multi_agent_events: multiAgentEvents,
+                two_agents_connected_events: twoConnectedEvents,
+                shared_conference_groups: sharedConf.length,
+                orphaned_in_progress_calls: orphans.length,
+                orphaned_with_agent_leg: orphans.filter(o => o.has_user).length,
+            },
+            orphaned_by_month: orphanByMonth,
+            confirmed_crossing_samples,
+            shared_conference_samples: sharedConf.slice(0, sampleN).map(s => ({
+                conference_sid: s._id,
+                call_ids: s.call_ids,
+                distinct_call_count: s.n,
+                distinct_contacts: (s.contacts || []).length,
+            })),
+            concurrent_event_samples,
+            notes: [
+                'confirmed_crossings: THE accurate exposure metric. Calls whose events show a user who "Entered into the contact conference" but has NO call_leg on this call — a foreign agent from a DIFFERENT call landed in this contact\'s room. Legit warm transfers don\'t count (the transferred-to agent gets a leg). Event-derived, so it survives orphaned legs with null conference_sid. Exact count over the whole window.',
+                'simultaneous_crossings: subset of confirmed_crossings where a foreign agent was present at the SAME instant as another participant (real two-way audio exposure, not just sequential room reuse). Computed over crossings_parsed_for_simultaneity calls; if that is less than confirmed_crossings (parse cap 3000), treat it as a lower bound.',
+                'transfer_label_artifact_calls: calls whose conference events carry a non-ObjectId entrant label (e.g. "user:undefined") that is NOT a call_leg user. These are warm-transfer targets mislabeled by the ~Feb 8 → Apr 1 2026 deploy, NOT crossings — they are EXCLUDED from confirmed_crossings (counting them was a false positive). A non-zero value here flags that window of data quality; it is not an exposure metric.',
+                'concurrent_call_events / multi_agent_events / two_agents_connected_events: temporal-overlap heuristics. These OVER-COUNT true crossings — queue ring-all fans one call to many agents, and inbound/outbound overlaps land in separate Twilio rooms. multi_agent_offered on each sample reflects agents OFFERED, not a confirmed crossing. Prefer confirmed_crossings.',
+                'shared_conference_groups: distinct Twilio conference_sids on >1 call record (gold-standard crossing) BUT blind to orphans that persist null conference_sid — a 0 here is not reassuring. confirmed_crossings is the reliable signal.',
+                'orphaned_in_progress_calls: stuck status:in_progress calls — the cleanup/backfill worklist (call_ids retrievable via search_calls status=in_progress).',
+                'grace_seconds: how long a never-connected (in_progress/duration 0) call is assumed live for the overlap heuristics (detector 1 only).',
+            ],
         };
     }
 };

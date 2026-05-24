@@ -131,6 +131,7 @@ import { getCallVoicemailsTool, handleGetCallVoicemails } from './tools/calls/ge
 import { getCallHoldEventsTool, handleGetCallHoldEvents } from './tools/calls/get-call-hold-events.js';
 import { getCallTranscriptionTool, handleGetCallTranscription } from './tools/calls/get-call-transcription.js';
 import { getCallQualityMetricsTool, handleGetCallQualityMetrics } from './tools/calls/get-call-quality-metrics.js';
+import { analyzeCrossedCallsTool, handleAnalyzeCrossedCalls } from './tools/calls/analyze-crossed-calls.js';
 
 // Changelog (Phase 17)
 import { createChangelogEntryTool, handleCreateChangelogEntry } from './tools/changelog/create-changelog-entry.js';
@@ -279,6 +280,7 @@ class SassLogsServer {
             getCallHoldEventsTool,
             getCallTranscriptionTool,
             getCallQualityMetricsTool,
+            analyzeCrossedCallsTool,
             // Changelog (Phase 17)
             createChangelogEntryTool,
             queryChangelogEntriesTool,
@@ -410,6 +412,7 @@ class SassLogsServer {
             'get_call_hold_events': handleGetCallHoldEvents,
             'get_call_transcription': handleGetCallTranscription,
             'get_call_quality_metrics': handleGetCallQualityMetrics,
+            'analyze_crossed_calls': handleAnalyzeCrossedCalls,
             // Changelog (Phase 17)
             'create_changelog_entry': handleCreateChangelogEntry,
             'query_changelog_entries': handleQueryChangelogEntries,
