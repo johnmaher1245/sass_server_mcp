@@ -35,6 +35,8 @@ export const config = {
         bkConvertedActionRules: 'bk_converted_action_rules',
         bkCases: 'bk_cases',
         bkDistricts: 'bk_districts',
+        bkQuestionnaires: 'bk_questionnaires',
+        bkFilings: 'bk_filings',
         // Call center
         calls: 'calls',
         callFlows: 'call_flows',

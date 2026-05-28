@@ -15,6 +15,7 @@ import docketQueries from './queries/docket.js';
 import callsQueries from './queries/calls.js';
 import changelogQueries from './queries/changelog.js';
 import paymentsQueries from './queries/payments.js';
+import statesQueries from './queries/states.js';
 
 class MongoDBService {
     constructor() {
@@ -53,6 +54,8 @@ class MongoDBService {
         this.bkConvertedActionRules = null;
         this.bkCases = null;
         this.bkDistricts = null;
+        this.bkQuestionnaires = null;
+        this.bkFilings = null;
         // Call center
         this.calls = null;
         this.callFlows = null;
@@ -123,6 +126,8 @@ class MongoDBService {
             this.bkConvertedActionRules = this.db.collection(config.collections.bkConvertedActionRules);
             this.bkCases = this.db.collection(config.collections.bkCases);
             this.bkDistricts = this.db.collection(config.collections.bkDistricts);
+            this.bkQuestionnaires = this.db.collection(config.collections.bkQuestionnaires);
+            this.bkFilings = this.db.collection(config.collections.bkFilings);
             // Call center
             this.calls = this.db.collection(config.collections.calls);
             this.callFlows = this.db.collection(config.collections.callFlows);
@@ -325,6 +330,7 @@ Object.assign(
     callsQueries,
     changelogQueries,
     paymentsQueries,
+    statesQueries,
 );
 
 export default new MongoDBService();

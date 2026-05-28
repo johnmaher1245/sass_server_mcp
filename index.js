@@ -164,6 +164,11 @@ import { searchDocketPatternsTool, handleSearchDocketPatterns } from './tools/do
 import { getDocketParserStatsTool, handleGetDocketParserStats } from './tools/docket/get-docket-parser-stats.js';
 import { explainDocketEntryTool, handleExplainDocketEntry } from './tools/docket/explain-docket-entry.js';
 
+// State / Geographic pipeline (Phase 21)
+import { analyzePipelineByStateTool, handleAnalyzePipelineByState } from './tools/states/analyze-pipeline-by-state.js';
+import { getMatterStateSignalsTool, handleGetMatterStateSignals } from './tools/states/get-matter-state-signals.js';
+import { validateStateSignalsAgainstFiledTool, handleValidateStateSignalsAgainstFiled } from './tools/states/validate-state-signals-against-filed.js';
+
 class SassLogsServer {
     constructor() {
         this.server = new Server(
@@ -308,6 +313,10 @@ class SassLogsServer {
             searchDocketPatternsTool,
             getDocketParserStatsTool,
             explainDocketEntryTool,
+            // State / Geographic pipeline (Phase 21)
+            analyzePipelineByStateTool,
+            getMatterStateSignalsTool,
+            validateStateSignalsAgainstFiledTool,
         ];
 
         this.toolHandlers = {
@@ -440,6 +449,10 @@ class SassLogsServer {
             'search_docket_patterns': handleSearchDocketPatterns,
             'get_docket_parser_stats': handleGetDocketParserStats,
             'explain_docket_entry': handleExplainDocketEntry,
+            // State / Geographic pipeline (Phase 21)
+            'analyze_pipeline_by_state': handleAnalyzePipelineByState,
+            'get_matter_state_signals': handleGetMatterStateSignals,
+            'validate_state_signals_against_filed': handleValidateStateSignalsAgainstFiled,
         };
 
         this.setupHandlers();

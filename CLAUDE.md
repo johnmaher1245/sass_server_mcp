@@ -331,6 +331,17 @@ All read-only. The docket parser has TWO layers — hardcoded date extraction (t
 
 **Sensitive fields:** `payment_methods.token` (processor card vault reference) is stripped from search results via `config.paymentMethodsLeanProjection` and never returned by `get_payment_method_detail` either.
 
+### State / Geographic Pipeline (Phase 21)
+All read-only. The platform has **no single reliable state field pre-filing** — state only becomes authoritative once a case is filed (baked into the step name / district). These tools surface every state signal (contact address, `matter.state`, geo-sync district, ZIP code, intake questionnaire, phone area code) and reconcile them by priority, so you can both measure coverage and report the OH-vs-MI split.
+
+| Tool | Description |
+|------|-------------|
+| `analyze_pipeline_by_state` | Break a cohort (scope filter, or `preset:"bk_pre_filing"`) down by US state. Returns the resolved distribution, per-signal **coverage** (judge trustworthiness), `fixable_by_resync` (has a contact state but empty `geo_district` — a re-sync fills it), source conflicts, a per-step breakdown, and samples. `cohort_mode:"entered_window"` reads the `dates[]` step history for monthly retained / sent-to-prep counts. |
+| `get_matter_state_signals` | Every state signal for ONE matter side by side, with the resolved state, a confidence read, and the filed ground-truth state parsed from the step name. Spot-check / wrong-state triage. |
+| `validate_state_signals_against_filed` | Calibrate the pre-filing signals against FILED matters (true state known from step name / district). Per-signal `accuracy_pct` + `coverage_pct` — use to rank signals and attach a confidence level before trusting an OH-vs-MI estimate. |
+
+**Resolution priority** (default, configurable): `contact → matter → geo → zip → questionnaire → phone`. Phone is a fallback only (numbers port/move). Reference data lives in `config/areaCodeStates.js` (MI/OH area codes exhaustive) and `config/zipStates.js` (OH 430–459, MI 480–499 guaranteed; neighbors best-effort). Reads `matters` + `contacts`; `bk_questionnaires` / `bk_filings` are best-effort (degrade gracefully if absent). The Fairmax BK workflow id + pre-filing category ids are constants in `services/queries/states.js`.
+
 ## Collections
 
 | Config Key | Collection | Used By |
@@ -365,6 +376,8 @@ All read-only. The docket parser has TWO layers — hardcoded date extraction (t
 | `bkConvertedActionRules` | bk_converted_action_rules | Docket parser (converted rules) |
 | `bkCases` | bk_cases | Docket verification (date comparison) |
 | `bkDistricts` | bk_districts | Docket verification (timezone) |
+| `bkQuestionnaires` | bk_questionnaires | State signals (intake current-address state) |
+| `bkFilings` | bk_filings | State signals (filing court state) |
 | `calls` | calls | Call center investigation |
 | `callFlows` | call_flows | Call flow config, routing trace |
 | `callPhoneNumbers` | call_phone_numbers | Phone number config |
