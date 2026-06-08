@@ -62,6 +62,11 @@ export const config = {
         paymentTrustEntries: 'payment_trust_entries',
         companies: 'companies',
         invoices: 'invoices',
+        // Microsoft email connector (Phase 22)
+        emailGrants: 'email_grants',
+        emailSubscriptions: 'email_subscriptions',
+        emailSyncStates: 'email_sync_states',
+        emailMessages: 'email_messages',
     },
 
     defaultLimit: 50,
@@ -124,6 +129,18 @@ export const config = {
     paymentWebhookEventsLeanProjection: {
         payload: 0, history: 0,
     },
+
+    // Microsoft email connector (Phase 22)
+    // The raw Mongo driver bypasses the mongoose toJSON transform that normally strips token
+    // material, so encrypted credentials MUST be projected out here on every read.
+    emailGrantsProjection: {
+        access_token: 0, refresh_token: 0, id_token: 0,
+        azure_client_id: 0, azure_client_secret: 0,
+    },
+    // client_state is the secret echoed back to validate Graph webhooks — never return it.
+    emailSubscriptionsProjection: { client_state: 0 },
+    // body is large (and PII); snippet is enough for listings. Use a message-detail path for full body.
+    emailMessagesLeanProjection: { body: 0 },
 };
 
 export default config;

@@ -16,6 +16,7 @@ import callsQueries from './queries/calls.js';
 import changelogQueries from './queries/changelog.js';
 import paymentsQueries from './queries/payments.js';
 import statesQueries from './queries/states.js';
+import emailQueries from './queries/email.js';
 
 class MongoDBService {
     constructor() {
@@ -81,6 +82,11 @@ class MongoDBService {
         this.paymentTrustEntries = null;
         this.companies = null;
         this.invoices = null;
+        // Microsoft email connector (Phase 22)
+        this.emailGrants = null;
+        this.emailSubscriptions = null;
+        this.emailSyncStates = null;
+        this.emailMessages = null;
         this.isConnected = false;
     }
 
@@ -153,6 +159,11 @@ class MongoDBService {
             this.paymentTrustEntries = this.db.collection(config.collections.paymentTrustEntries);
             this.companies = this.db.collection(config.collections.companies);
             this.invoices = this.db.collection(config.collections.invoices);
+            // Microsoft email connector (Phase 22)
+            this.emailGrants = this.db.collection(config.collections.emailGrants);
+            this.emailSubscriptions = this.db.collection(config.collections.emailSubscriptions);
+            this.emailSyncStates = this.db.collection(config.collections.emailSyncStates);
+            this.emailMessages = this.db.collection(config.collections.emailMessages);
 
             this.isConnected = true;
             console.error(`[MCP] Connected to MongoDB: ${dbName}`);
@@ -331,6 +342,7 @@ Object.assign(
     changelogQueries,
     paymentsQueries,
     statesQueries,
+    emailQueries,
 );
 
 export default new MongoDBService();

@@ -169,6 +169,11 @@ import { analyzePipelineByStateTool, handleAnalyzePipelineByState } from './tool
 import { getMatterStateSignalsTool, handleGetMatterStateSignals } from './tools/states/get-matter-state-signals.js';
 import { validateStateSignalsAgainstFiledTool, handleValidateStateSignalsAgainstFiled } from './tools/states/validate-state-signals-against-filed.js';
 
+// Microsoft email connector (Phase 22)
+import { searchEmailGrantsTool, handleSearchEmailGrants } from './tools/email/search-email-grants.js';
+import { diagnoseMailboxSyncTool, handleDiagnoseMailboxSync } from './tools/email/diagnose-mailbox-sync.js';
+import { searchEmailMessagesTool, handleSearchEmailMessages } from './tools/email/search-email-messages.js';
+
 class SassLogsServer {
     constructor() {
         this.server = new Server(
@@ -317,6 +322,10 @@ class SassLogsServer {
             analyzePipelineByStateTool,
             getMatterStateSignalsTool,
             validateStateSignalsAgainstFiledTool,
+            // Microsoft email connector (Phase 22)
+            searchEmailGrantsTool,
+            diagnoseMailboxSyncTool,
+            searchEmailMessagesTool,
         ];
 
         this.toolHandlers = {
@@ -453,6 +462,10 @@ class SassLogsServer {
             'analyze_pipeline_by_state': handleAnalyzePipelineByState,
             'get_matter_state_signals': handleGetMatterStateSignals,
             'validate_state_signals_against_filed': handleValidateStateSignalsAgainstFiled,
+            // Microsoft email connector (Phase 22)
+            'search_email_grants': handleSearchEmailGrants,
+            'diagnose_mailbox_sync': handleDiagnoseMailboxSync,
+            'search_email_messages': handleSearchEmailMessages,
         };
 
         this.setupHandlers();

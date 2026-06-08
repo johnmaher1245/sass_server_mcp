@@ -342,6 +342,25 @@ All read-only. The platform has **no single reliable state field pre-filing** �
 
 **Resolution priority** (default, configurable): `contact → matter → geo → zip → questionnaire → phone`. Phone is a fallback only (numbers port/move). Reference data lives in `config/areaCodeStates.js` (MI/OH area codes exhaustive) and `config/zipStates.js` (OH 430–459, MI 480–499 guaranteed; neighbors best-effort). Reads `matters` + `contacts`; `bk_questionnaires` / `bk_filings` are best-effort (degrade gracefully if absent). The Fairmax BK workflow id + pre-filing category ids are constants in `services/queries/states.js`.
 
+### Microsoft Email Connector (Phase 22)
+All read-only. Diagnostics over the `server_microsoft` Graph connector's own collections (mailbox
+grants, Graph webhook subscriptions, delta bookmarks, synced messages). Timestamps are UNIX seconds.
+**The TS connector does NOT write to the legacy `system_logs`** the log tools read, so these are the
+way to inspect connector state from the MCP. Token material (`access_token`/`refresh_token`/
+`id_token`/`azure_*`) and the subscription `client_state` webhook secret are projected out on every
+read (the raw driver bypasses the mongoose `toJSON` strip), and message `body` is dropped from listings.
+
+| Tool | Description |
+|------|-------------|
+| `search_email_grants` | List/triage connected mailboxes by email/status/grant_type/shared/provider/division/company. `delegated` = per-user OAuth (`/me`); `application` = app-only client-credentials (`/users/{id}`, shared/joint inboxes). Lean summary: status, grant_type, shared, microsoft_user_id presence, capabilities, sync_enabled, dry_run, last_synced_at, last_error, division name. |
+| `diagnose_mailbox_sync` | Deep "why isn't this mailbox ingesting?" for ONE grant (by `grant_id` or `email`). One call pulls the grant + every `email_sync_states` row (delta backstop: bookmark present?, last_delta_sync_at, last_error, in_progress) + every `email_subscriptions` row (Graph push: status, expiration, **last_notification_at**) + message stats, then computes `health` flags + a ranked `likely_issues` list (silent/expired/missing subscription, stale/errored/wedged delta, not-connected grant, missing microsoft_user_id, …). Because the DB can't see Graph-side delivery, also returns `also_check_microsoft_side` (Junk/quarantine/rules/alias/Application-Access-Policy). |
+| `search_email_messages` | List/verify the `email_messages` actually ingested for one mailbox (bound to a grant via `grant_id`/`email`). Filter by subject/from/folder/outbound/date range. `body` stripped (snippet kept). Answers "did this specific email sync?" / "what's the latest message we have?" |
+
+**Diagnostic note:** a clean delta state (recent `last_delta_sync_at`, `last_error: null`) with no new
+`email_messages` row means Graph's inbox delta returned nothing for that mailbox — the message either
+never landed in the synced Inbox folder, or the subscription/delta targets a different mailbox than
+delivery. `diagnose_mailbox_sync` is built to make that distinction obvious.
+
 ## Collections
 
 | Config Key | Collection | Used By |
@@ -398,6 +417,10 @@ All read-only. The platform has **no single reliable state field pre-filing** �
 | `paymentWebhookEvents` | payment_webhook_events | Webhook event tools |
 | `paymentTrustEntries` | payment_trust_entries | Trust ledger tool + matter summary |
 | `companies` | companies | Processor resolution in matter summary |
+| `emailGrants` | email_grants | Microsoft email connector — mailbox grants |
+| `emailSubscriptions` | email_subscriptions | Microsoft email connector — Graph webhook subscriptions |
+| `emailSyncStates` | email_sync_states | Microsoft email connector — delta bookmarks |
+| `emailMessages` | email_messages | Microsoft email connector — synced messages |
 
 ## Security
 
