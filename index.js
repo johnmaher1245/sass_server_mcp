@@ -174,6 +174,14 @@ import { searchEmailGrantsTool, handleSearchEmailGrants } from './tools/email/se
 import { diagnoseMailboxSyncTool, handleDiagnoseMailboxSync } from './tools/email/diagnose-mailbox-sync.js';
 import { searchEmailMessagesTool, handleSearchEmailMessages } from './tools/email/search-email-messages.js';
 
+// Database diagnostics (Phase 23, read-only — separate scoped connection)
+import diagnosticsService from './services/diagnostics.js';
+import { dbRunCommandTool, handleDbRunCommand } from './tools/diagnostics/db-run-command.js';
+import { dbAggregateTool, handleDbAggregate } from './tools/diagnostics/db-aggregate.js';
+import { dbFindTool, handleDbFind } from './tools/diagnostics/db-find.js';
+import { dbExplainTool, handleDbExplain } from './tools/diagnostics/db-explain.js';
+import { indexHealthTool, handleIndexHealth } from './tools/diagnostics/index-health.js';
+
 class SassLogsServer {
     constructor() {
         this.server = new Server(
@@ -326,6 +334,12 @@ class SassLogsServer {
             searchEmailGrantsTool,
             diagnoseMailboxSyncTool,
             searchEmailMessagesTool,
+            // Database diagnostics (Phase 23, read-only)
+            dbRunCommandTool,
+            dbAggregateTool,
+            dbFindTool,
+            dbExplainTool,
+            indexHealthTool,
         ];
 
         this.toolHandlers = {
@@ -466,6 +480,12 @@ class SassLogsServer {
             'search_email_grants': handleSearchEmailGrants,
             'diagnose_mailbox_sync': handleDiagnoseMailboxSync,
             'search_email_messages': handleSearchEmailMessages,
+            // Database diagnostics (Phase 23, read-only)
+            'db_run_command': handleDbRunCommand,
+            'db_aggregate': handleDbAggregate,
+            'db_find': handleDbFind,
+            'db_explain': handleDbExplain,
+            'db_index_health': handleIndexHealth,
         };
 
         this.setupHandlers();
@@ -519,12 +539,14 @@ class SassLogsServer {
         process.on('SIGINT', async () => {
             console.error('[MCP] Shutting down...');
             await mongoService.close();
+            await diagnosticsService.close();
             process.exit(0);
         });
 
         process.on('SIGTERM', async () => {
             console.error('[MCP] Shutting down...');
             await mongoService.close();
+            await diagnosticsService.close();
             process.exit(0);
         });
     }

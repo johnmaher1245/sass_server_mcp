@@ -1,6 +1,11 @@
 export const config = {
     mongoUri: process.env.MONGODB_URI,
 
+    // Read-only DB diagnostics connection (Phase 23) — a SEPARATE, scoped user
+    // (readAnyDatabase + clusterMonitor), never the app credentials. Unset by
+    // default: the diagnostics tools stay inert until this is provided.
+    mongoDiagnosticsUri: process.env.MONGODB_DIAGNOSTICS_URI,
+
     collections: {
         systemLogs: 'system_logs',
         dryRunLogs: 'dry_run_logs',
@@ -71,6 +76,15 @@ export const config = {
 
     defaultLimit: 50,
     maxLimit: 500,
+
+    // Database diagnostics (Phase 23) — caps to protect an already-strained cluster.
+    diagnostics: {
+        maxPoolSize: 3,
+        defaultMaxTimeMS: 20000,
+        maxMaxTimeMS: 60000,
+        defaultDocLimit: 200,
+        maxDocLimit: 2000,
+    },
 
     serverName: 'sass-platform-logs',
     serverVersion: '1.0.0',

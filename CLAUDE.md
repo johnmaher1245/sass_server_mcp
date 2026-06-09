@@ -361,6 +361,33 @@ read (the raw driver bypasses the mongoose `toJSON` strip), and message `body` i
 never landed in the synced Inbox folder, or the subscription/delta targets a different mailbox than
 delivery. `diagnose_mailbox_sync` is built to make that distinction obvious.
 
+### Database Diagnostics (Phase 23)
+Read-only performance/introspection tools that talk to the **live database engine** — not the
+app collections. They run over their OWN `MongoClient` (separate pool from `mongoService`): a dedicated
+`MONGODB_DIAGNOSTICS_URI` if set, otherwise a **fallback to the app connection (`MONGODB_URI`)** — whose
+user already has read access and writes to only `changelog_entries`/`system_tickets`, so reuse is safe.
+They're live as soon as the server has any Mongo connection. A dedicated user limited to
+**`readAnyDatabase` + `clusterMonitor`** gives role-level read-only isolation; either way
+`services/diagnostics-guard.js` is the hard guarantee (command allowlist + `$out`/`$merge` rejection +
+profiler-write block), so the tools cannot write regardless of the user's privileges. Every op runs
+on a secondary by default (`readPreference=secondaryPreferred`) with a `maxTimeMS` cap and bounded
+result size, to protect a strained cluster. Lives in `services/diagnostics.js` (own `MongoClient`,
+NOT mixed onto `mongoService`) + `tools/diagnostics/`.
+
+| Tool | Description |
+|------|-------------|
+| `db_run_command` | One read-only diagnostic command: serverStatus, currentOp, dbStats, collStats, top, hostInfo, listDatabases, listCollections, listIndexes, connPoolStats, replSetGetStatus, getParameter, buildInfo, getLog, dataSize, count, `{ profile: -1 }`. Cluster commands auto-route to `admin`. Writes (setProfilingLevel, createIndexes, killOp, insert/update/delete) rejected. |
+| `db_aggregate` | Read-only aggregation — `$indexStats` (dead-index hunt), `$collStats` (sizing), or group/sort over `system.profile` to rank slow shapes. `$out`/`$merge` rejected anywhere (incl. nested). |
+| `db_find` | Read documents — mainly `system.profile` (slow ops, sort `{ millis: -1 }`) or spot-checks. |
+| `db_explain` | Query plan: IXSCAN vs COLLSCAN, keys/docs examined vs returned. `queryPlanner` (default, no execution) or `executionStats`/`allPlansExecution` (runs the read). |
+| `db_index_health` | One-shot index audit across the heaviest collections: joins listIndexes + `$indexStats` + `$collStats` → unused-index drop candidates (ops:0, excl. _id/unique/TTL), redundant-prefix candidates, and biggest-wasted-bytes ranking. Per-node usage caveats in the result. Metadata-only. |
+
+**Setup:** none required if the app's Mongo user already has `readAnyDatabase` + `clusterMonitor` — the
+tools fall back to `MONGODB_URI` and are live after a server restart. For role-level isolation, create a
+dedicated read-only user (`readAnyDatabase` + `clusterMonitor`) and set `MONGODB_DIAGNOSTICS_URI`. The
+native profiler is read here but NOT enabled by these tools (that's a write) — an operator runs
+`db.setProfilingLevel(1, { slowms: N })` on the target DB first; the tools then read `system.profile`.
+
 ## Collections
 
 | Config Key | Collection | Used By |
@@ -427,3 +454,4 @@ delivery. `diagnose_mailbox_sync` is built to make that distinction obvious.
 - **NEVER read `.env*` files** — they contain database credentials
 - Most queries are read-only; `create_changelog_entry` is a write tool
 - Sensitive fields (passwords, SSN, security codes) are excluded via projections in config.js
+- The Phase 23 diagnostics tools run over their own `MongoClient` (a dedicated `MONGODB_DIAGNOSTICS_URI`, or a fallback to the app `MONGODB_URI`). Read-only is enforced by `services/diagnostics-guard.js` (allowlist + `$out`/`$merge` + profiler-write block) — absolute regardless of the user's privileges — plus, with a dedicated `readAnyDatabase`+`clusterMonitor` user, by the role itself. The app user can write only `changelog_entries`/`system_tickets`, which diagnostics never touch. They cannot create indexes or enable the profiler — those stay with a human operator.
