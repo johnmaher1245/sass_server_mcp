@@ -168,7 +168,17 @@ class DiagnosticsService {
         if (!allowed.has(v)) throw new Error(`verbosity must be one of: ${[...allowed].join(', ')}`);
 
         const dbName = this._resolveDb(db, 'db');
-        const coll = this.client.db(dbName).collection(collection);
+        // Explain must run on a handle with readConcern/writeConcern explicitly
+        // cleared: client.db() merges in the client's URI-derived options (e.g.
+        // w=majority), resolveOptions() inherits them down to the cursor, and the
+        // driver then refuses .explain() on an aggregation carrying a writeConcern
+        // — even though a read-only pipeline would never send it. readConcern is
+        // cleared too (explain forms don't reliably accept it, and a plan diagnostic
+        // doesn't want app-level read isolation anyway). readPreference still
+        // inherits secondaryPreferred from the client.
+        const coll = this.client
+            .db(dbName, { writeConcern: undefined, readConcern: undefined })
+            .collection(collection);
         const options = {};
         if (read_preference) options.readPreference = read_preference;
 

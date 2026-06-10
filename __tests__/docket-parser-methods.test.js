@@ -46,6 +46,50 @@ test('_summarizeRuleFirings: classifies firing / never-fired / newly-created', (
     assert.equal(out[0].name, 'Fires', 'sorted by firing_count desc');
 });
 
+test('_summarizeRuleFirings: byproduct records count as firings for dismissed/converted rules', () => {
+    const windowStart = 1000;
+    // The prod blind spot: empty-actions dismissed rule → zero automation_logs, but byproduct records exist.
+    const dismissedNoLogs = { _id: new ObjectId(), __source: 'bk_dismissed_rule', name: 'Dismissed', active: true, created_at: 500 };
+    const convertedBoth = { _id: new ObjectId(), __source: 'bk_converted_rule', name: 'Converted', active: true, created_at: 500 };
+    const dismissedSilent = { _id: new ObjectId(), __source: 'bk_dismissed_rule', name: 'Silent', active: true, created_at: 500 };
+    const docketRule = { _id: new ObjectId(), __source: 'bk_docket_rule', name: 'Docket', active: true, created_at: 500 };
+    const logAgg = [
+        { _id: { source_id: convertedBoth._id, source: 'bk_converted_rule', status: 'sent' }, count: 2, last: 1400 },
+        { _id: { source_id: docketRule._id, source: 'bk_docket_rule', status: 'sent' }, count: 1, last: 1300 },
+    ];
+    const byproductAgg = [
+        { rule_id: dismissedNoLogs._id, collection: 'bk_dismissed_entries', count: 11, last: 1600 },
+        { rule_id: convertedBoth._id, collection: 'bk_converted_entries', count: 3, last: 1500 },
+    ];
+    const out = mongoService._summarizeRuleFirings([dismissedNoLogs, convertedBoth, dismissedSilent, docketRule], logAgg, windowStart, byproductAgg);
+    const byName = Object.fromEntries(out.map((o) => [o.name, o]));
+
+    assert.equal(byName.Dismissed.firing_count, 11, 'byproduct count becomes the firing count');
+    assert.equal(byName.Dismissed.firing_signal, 'byproduct_records');
+    assert.equal(byName.Dismissed.automation_log_count, 0);
+    assert.equal(byName.Dismissed.byproduct_count, 11);
+    assert.equal(byName.Dismissed.byproduct_collection, 'bk_dismissed_entries');
+    assert.equal(byName.Dismissed.last_fired_at, 1600);
+    assert.equal(byName.Dismissed.assessment, 'firing');
+
+    assert.equal(byName.Converted.firing_count, 3, 'max of the two signals, not the sum');
+    assert.equal(byName.Converted.firing_signal, 'both');
+    assert.equal(byName.Converted.automation_log_count, 2);
+    assert.equal(byName.Converted.byproduct_count, 3);
+    assert.equal(byName.Converted.last_fired_at, 1500, 'last_fired_at is the max across signals');
+
+    assert.equal(byName.Silent.firing_count, 0);
+    assert.equal(byName.Silent.firing_signal, null);
+    assert.equal(byName.Silent.byproduct_count, 0, 'byproduct signal shown as checked even at zero');
+    assert.equal(byName.Silent.assessment, 'never_fired');
+
+    assert.equal(byName.Docket.firing_signal, 'automation_logs');
+    assert.equal(byName.Docket.byproduct_count, undefined, 'no byproduct fields for sources without one');
+    assert.equal(byName.Docket.byproduct_collection, undefined);
+
+    assert.equal(out[0].name, 'Dismissed', 'sorted by combined firing_count desc');
+});
+
 test('_buildRuleCandidacy: flags created_after_entry and chapter applicability', () => {
     const entry = { created_at: 1000, chapter: 13 };
     const rules = [
@@ -116,6 +160,28 @@ test('getDocketParserStats: aggregates firings, coverage, and date extraction', 
     assert.equal(res.date_extraction[0].action_name, 'Schedule 341 Hearing');
     assert.equal(res.summary.rules_that_fired, 1);
     assert.equal(res.rule_effectiveness[0].firing_count, 5);
+});
+
+test('getDocketParserStats: empty-actions dismissed rule counts as firing via bk_dismissed_entries', async () => {
+    const division = new ObjectId().toString();
+    const dismissedRuleId = new ObjectId();
+    resetDocketCollections(mongoService, {
+        bkDismissedActionRules: mockCollection({ docs: [{ _id: dismissedRuleId, name: 'Dismissed', active: true, created_at: 100, workflow: null, actions: [] }] }),
+        bkDismissedEntries: mockCollection({ agg: [{ _id: dismissedRuleId, count: 11, last: 1748000000 }] }),
+        bkDocketEntries: mockCollection({ count: [50, 5], agg: [] }),
+    });
+    const res = await mongoService.getDocketParserStats({ division });
+    const rule = res.rule_effectiveness.find((r) => r._id.equals(dismissedRuleId));
+    assert.equal(rule.firing_count, 11);
+    assert.equal(rule.firing_signal, 'byproduct_records');
+    assert.equal(rule.automation_log_count, 0);
+    assert.equal(rule.byproduct_collection, 'bk_dismissed_entries');
+    assert.equal(rule.last_fired_at, 1748000000);
+    assert.equal(rule.assessment, 'firing');
+    assert.equal(res.summary.rules_that_fired, 1);
+    assert.equal(res.summary.rules_never_fired, 0);
+    assert.equal(res.summary.rules_firing_byproduct_only, 1);
+    assert.match(res.rule_effectiveness_note, /byproduct_count/);
 });
 
 test('explainDocketEntry: invalid entry_id', async () => {

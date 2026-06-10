@@ -41,13 +41,20 @@ export const HARDCODED_DATE_PATTERNS = [
  * The four CONFIGURABLE rule collections. All are matched by the same consolidated
  * matcher (matchesRule.js): case-insensitive substring on docket_text, exclude_patterns,
  * plus chapter / bk_trustees / bk_districts / require_documents filters. Each writes an
- * automation_log with the given `source` tag and `source_id = rule._id`.
+ * automation_log with the given `source` tag and `source_id = rule._id` — but only ONE
+ * LOG PER EXECUTED ACTION, so a rule with empty actions[] writes no automation_logs at all.
+ *
+ * `firing_byproduct` names a record the server creates UNCONDITIONALLY on every rule match
+ * (keyed back to the rule via `rule_field`), making it a firing signal that works even for
+ * empty-actions rules. Only dismissed/converted have one: discharge's
+ * bk_scheduled_credit_reports is gated on rule.credit_report.enabled and deduped per
+ * matter, and docket pattern rules create nothing besides their action logs.
  */
 export const CONFIGURABLE_RULE_COLLECTIONS = [
     { collection: 'bk_docket_pattern_rules',   source: 'bk_docket_rule',    label: 'Docket pattern rules',  description: 'General docket-text rules → tasks / texts / emails.', creates: [] },
     { collection: 'bk_discharge_action_rules', source: 'bk_discharge_rule', label: 'Discharge action rules', description: 'Discharge-related rules → actions, plus an optional scheduled credit-report pull (rule.credit_report).', creates: ['bk_scheduled_credit_reports'] },
-    { collection: 'bk_dismissed_action_rules', source: 'bk_dismissed_rule', label: 'Dismissed action rules', description: 'Dismissal rules → actions, plus a bk_dismissed_entries record for app2 acknowledgment.', creates: ['bk_dismissed_entries'] },
-    { collection: 'bk_converted_action_rules', source: 'bk_converted_rule', label: 'Converted action rules', description: 'Chapter-conversion rules → actions, plus a bk_converted_entries record (with parsed original/new chapter).', creates: ['bk_converted_entries'] },
+    { collection: 'bk_dismissed_action_rules', source: 'bk_dismissed_rule', label: 'Dismissed action rules', description: 'Dismissal rules → actions, plus a bk_dismissed_entries record for app2 acknowledgment.', creates: ['bk_dismissed_entries'], firing_byproduct: { collection: 'bk_dismissed_entries', rule_field: 'rule' } },
+    { collection: 'bk_converted_action_rules', source: 'bk_converted_rule', label: 'Converted action rules', description: 'Chapter-conversion rules → actions, plus a bk_converted_entries record (with parsed original/new chapter).', creates: ['bk_converted_entries'], firing_byproduct: { collection: 'bk_converted_entries', rule_field: 'rule' } },
 ];
 
 /** The automation_log `source` tags produced by the configurable rule layers above. */

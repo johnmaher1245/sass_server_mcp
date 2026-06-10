@@ -17,6 +17,7 @@ import changelogQueries from './queries/changelog.js';
 import paymentsQueries from './queries/payments.js';
 import statesQueries from './queries/states.js';
 import emailQueries from './queries/email.js';
+import hubTicketsQueries from './queries/hub-tickets.js';
 
 class MongoDBService {
     constructor() {
@@ -53,6 +54,8 @@ class MongoDBService {
         this.bkDischargeActionRules = null;
         this.bkDismissedActionRules = null;
         this.bkConvertedActionRules = null;
+        this.bkDismissedEntries = null;
+        this.bkConvertedEntries = null;
         this.bkCases = null;
         this.bkDistricts = null;
         this.bkQuestionnaires = null;
@@ -87,6 +90,12 @@ class MongoDBService {
         this.emailSubscriptions = null;
         this.emailSyncStates = null;
         this.emailMessages = null;
+        // Client comms hub tickets (distinct from internal system_tickets)
+        this.hubTickets = null;
+        this.hubTicketMessages = null;
+        this.hubTicketNotes = null;
+        this.hubTicketTags = null;
+        this.hubTicketStatusEvents = null;
         this.isConnected = false;
     }
 
@@ -130,6 +139,8 @@ class MongoDBService {
             this.bkDischargeActionRules = this.db.collection(config.collections.bkDischargeActionRules);
             this.bkDismissedActionRules = this.db.collection(config.collections.bkDismissedActionRules);
             this.bkConvertedActionRules = this.db.collection(config.collections.bkConvertedActionRules);
+            this.bkDismissedEntries = this.db.collection(config.collections.bkDismissedEntries);
+            this.bkConvertedEntries = this.db.collection(config.collections.bkConvertedEntries);
             this.bkCases = this.db.collection(config.collections.bkCases);
             this.bkDistricts = this.db.collection(config.collections.bkDistricts);
             this.bkQuestionnaires = this.db.collection(config.collections.bkQuestionnaires);
@@ -164,6 +175,12 @@ class MongoDBService {
             this.emailSubscriptions = this.db.collection(config.collections.emailSubscriptions);
             this.emailSyncStates = this.db.collection(config.collections.emailSyncStates);
             this.emailMessages = this.db.collection(config.collections.emailMessages);
+            // Client comms hub tickets
+            this.hubTickets = this.db.collection(config.collections.hubTickets);
+            this.hubTicketMessages = this.db.collection(config.collections.hubTicketMessages);
+            this.hubTicketNotes = this.db.collection(config.collections.hubTicketNotes);
+            this.hubTicketTags = this.db.collection(config.collections.hubTicketTags);
+            this.hubTicketStatusEvents = this.db.collection(config.collections.hubTicketStatusEvents);
 
             this.isConnected = true;
             console.error(`[MCP] Connected to MongoDB: ${dbName}`);
@@ -343,6 +360,7 @@ Object.assign(
     paymentsQueries,
     statesQueries,
     emailQueries,
+    hubTicketsQueries,
 );
 
 export default new MongoDBService();

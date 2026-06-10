@@ -59,6 +59,11 @@ import { markTicketInProgressTool, handleMarkTicketInProgress } from './tools/ti
 import { markTicketDeferredTool, handleMarkTicketDeferred } from './tools/tickets/mark-ticket-deferred.js';
 import { getTicketThreadTool, handleGetTicketThread } from './tools/tickets/get-ticket-thread.js';
 
+// Client comms hub tickets (read-only)
+import { getOpenHubTicketsSummaryTool, handleGetOpenHubTicketsSummary } from './tools/hub-tickets/get-open-hub-tickets-summary.js';
+import { searchHubTicketsTool, handleSearchHubTickets } from './tools/hub-tickets/search-hub-tickets.js';
+import { getHubTicketTool, handleGetHubTicket } from './tools/hub-tickets/get-hub-ticket.js';
+
 // Cross-collection intelligence (Phase 3)
 import { investigateTicketTool, handleInvestigateTicket } from './tools/tickets/investigate-ticket.js';
 import { getSystemHealthTool, handleGetSystemHealth } from './tools/system/get-system-health.js';
@@ -236,6 +241,10 @@ class SassLogsServer {
             markTicketInProgressTool,
             markTicketDeferredTool,
             getTicketThreadTool,
+            // Client comms hub tickets (read-only)
+            getOpenHubTicketsSummaryTool,
+            searchHubTicketsTool,
+            getHubTicketTool,
             // Cross-collection intelligence (Phase 3)
             investigateTicketTool,
             getSystemHealthTool,
@@ -382,6 +391,10 @@ class SassLogsServer {
             'mark_ticket_in_progress': handleMarkTicketInProgress,
             'mark_ticket_deferred': handleMarkTicketDeferred,
             'get_ticket_thread': handleGetTicketThread,
+            // Client comms hub tickets (read-only)
+            'get_open_hub_tickets_summary': handleGetOpenHubTicketsSummary,
+            'search_hub_tickets': handleSearchHubTickets,
+            'get_hub_ticket': handleGetHubTicket,
             // Cross-collection intelligence (Phase 3)
             'investigate_ticket': handleInvestigateTicket,
             'get_system_health': handleGetSystemHealth,

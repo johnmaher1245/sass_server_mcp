@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { HARDCODED_DATE_PATTERNS, CONFIGURABLE_RULE_COLLECTIONS, RULE_SOURCE_TAGS, HARDCODED_BEHAVIORS, NEW_CASE_DETECTION, LEGACY_INACTIVE_PATTERNS, matchDatePattern } from '../../config/docketParserReference.js';
+import { HARDCODED_DATE_PATTERNS, CONFIGURABLE_RULE_COLLECTIONS, RULE_SOURCE_TAGS, RULE_SOURCE_BY_TAG, HARDCODED_BEHAVIORS, NEW_CASE_DETECTION, LEGACY_INACTIVE_PATTERNS, matchDatePattern } from '../../config/docketParserReference.js';
 
 // BK Docket & Parser — query methods mixed into MongoDBService.prototype (see ../mongodb.js).
 // Plain object of method-shorthand functions; `this` binds to the singleton at call time.
@@ -568,7 +568,11 @@ export default {
 
     // Merge a rule list with automation_log firing aggregation. Pure helper.
     // firingAgg rows: { _id: { source_id, source, status }, count, last }
-    _summarizeRuleFirings(allRules, firingAgg, windowStartSec) {
+    // byproductAgg rows: { rule_id, collection, count, last } — counts of the records
+    // dismissed/converted rules create unconditionally on match (bk_dismissed_entries /
+    // bk_converted_entries). automation_logs hold one row per EXECUTED ACTION, so a rule
+    // with empty actions[] writes none; the byproduct count catches those firings.
+    _summarizeRuleFirings(allRules, firingAgg, windowStartSec, byproductAgg = []) {
         const byRuleId = {};
         for (const row of firingAgg) {
             const sid = row._id?.source_id ? row._id.source_id.toString() : null;
@@ -581,12 +585,31 @@ export default {
                 byRuleId[sid].last_fired_at = row.last;
             }
         }
+        const byproductByRuleId = {};
+        for (const row of byproductAgg) {
+            const rid = row.rule_id ? row.rule_id.toString() : null;
+            if (!rid) continue;
+            if (!byproductByRuleId[rid]) byproductByRuleId[rid] = { count: 0, last: null };
+            byproductByRuleId[rid].count += row.count;
+            if (row.last && (byproductByRuleId[rid].last === null || row.last > byproductByRuleId[rid].last)) {
+                byproductByRuleId[rid].last = row.last;
+            }
+        }
         return allRules
             .map((r) => {
                 const f = byRuleId[r._id.toString()] || { count: 0, last_fired_at: null, status_breakdown: {} };
+                const byproductMeta = RULE_SOURCE_BY_TAG[r.__source]?.firing_byproduct || null;
+                const bp = (byproductMeta && byproductByRuleId[r._id.toString()]) || { count: 0, last: null };
+                const firingCount = Math.max(f.count, bp.count);
+                let lastFiredAt = f.last_fired_at;
+                if (bp.last !== null && (lastFiredAt === null || bp.last > lastFiredAt)) lastFiredAt = bp.last;
+                let firingSignal = null;
+                if (f.count > 0 && bp.count > 0) firingSignal = 'both';
+                else if (f.count > 0) firingSignal = 'automation_logs';
+                else if (bp.count > 0) firingSignal = 'byproduct_records';
                 const createdInWindow = (r.created_at || 0) >= windowStartSec;
                 let assessment;
-                if (f.count > 0) assessment = 'firing';
+                if (firingCount > 0) assessment = 'firing';
                 else if (createdInWindow) assessment = 'never_fired_created_in_window';
                 else assessment = 'never_fired';
                 return {
@@ -596,8 +619,11 @@ export default {
                     active: r.active !== false,
                     created_at: r.created_at || null,
                     created_in_window: createdInWindow,
-                    firing_count: f.count,
-                    last_fired_at: f.last_fired_at,
+                    firing_count: firingCount,
+                    firing_signal: firingSignal,
+                    automation_log_count: f.count,
+                    ...(byproductMeta ? { byproduct_count: bp.count, byproduct_collection: byproductMeta.collection } : {}),
+                    last_fired_at: lastFiredAt,
                     status_breakdown: f.status_breakdown,
                     assessment,
                 };
@@ -822,13 +848,33 @@ export default {
         const ruleObjIds = scopedRules.map((r) => r._id);
 
         let firingAgg = [];
+        const byproductAgg = [];
         if (ruleObjIds.length) {
             firingAgg = await this.automationLogs.aggregate([
                 { $match: { division: divId, source: { $in: RULE_SOURCE_TAGS }, source_id: { $in: ruleObjIds }, created_at: { $gte: startSec, $lte: endSec } } },
                 { $group: { _id: { source_id: '$source_id', source: '$source', status: '$status' }, count: { $sum: 1 }, last: { $max: '$created_at' } } },
             ]).toArray();
+
+            // automation_logs hold one row per executed action, so rules with empty
+            // actions[] never appear there. Dismissed/converted matches always create a
+            // byproduct record keyed by `rule` — count those as a second firing signal.
+            const byproductCollByTag = {
+                bk_dismissed_rule: this.bkDismissedEntries,
+                bk_converted_rule: this.bkConvertedEntries,
+            };
+            for (const meta of CONFIGURABLE_RULE_COLLECTIONS) {
+                if (!meta.firing_byproduct) continue;
+                const ids = scopedRules.filter((r) => r.__source === meta.source).map((r) => r._id);
+                if (!ids.length) continue;
+                const { collection, rule_field } = meta.firing_byproduct;
+                const rows = await byproductCollByTag[meta.source].aggregate([
+                    { $match: { division: divId, [rule_field]: { $in: ids }, created_at: { $gte: startSec, $lte: endSec } } },
+                    { $group: { _id: `$${rule_field}`, count: { $sum: 1 }, last: { $max: '$created_at' } } },
+                ]).toArray();
+                for (const row of rows) byproductAgg.push({ rule_id: row._id, collection, count: row.count, last: row.last });
+            }
         }
-        const rule_effectiveness = this._summarizeRuleFirings(scopedRules, firingAgg, startSec);
+        const rule_effectiveness = this._summarizeRuleFirings(scopedRules, firingAgg, startSec, byproductAgg);
 
         const entryWindow = { division: divId, timestamp_unix: { $gte: startSec, $lte: endSec } };
         if (typeof chapter === 'number') entryWindow.chapter = chapter;
@@ -854,6 +900,7 @@ export default {
                 date_end: new Date(endSec * 1000).toISOString(),
             },
             rule_effectiveness,
+            rule_effectiveness_note: 'firing_count = max(automation_log_count, byproduct_count) and firing_signal says which signal(s) produced it. automation_logs record one row per executed action, so a rule with empty actions[] writes none; dismissed/converted rule matches always create a bk_dismissed_entries / bk_converted_entries record (byproduct_count), which catches those firings. Docket/discharge rules have no byproduct signal — an empty-actions rule there can still show never_fired while matching.',
             coverage: {
                 total_entries_in_window: totalEntries,
                 entries_with_no_actions: noActionEntries,
@@ -865,6 +912,7 @@ export default {
                 total_rules: scopedRules.length,
                 rules_that_fired: rule_effectiveness.filter((r) => r.firing_count > 0).length,
                 rules_never_fired: rule_effectiveness.filter((r) => r.firing_count === 0).length,
+                rules_firing_byproduct_only: rule_effectiveness.filter((r) => r.firing_signal === 'byproduct_records').length,
             },
         };
     },
