@@ -64,6 +64,12 @@ import { getOpenHubTicketsSummaryTool, handleGetOpenHubTicketsSummary } from './
 import { searchHubTicketsTool, handleSearchHubTickets } from './tools/hub-tickets/search-hub-tickets.js';
 import { getHubTicketTool, handleGetHubTicket } from './tools/hub-tickets/get-hub-ticket.js';
 
+// Action suggestions — comms co-pilot review queue (WRITE, dev-first)
+import { upsertActionSuggestionTool, handleUpsertActionSuggestion } from './tools/action-suggestions/upsert-action-suggestion.js';
+import { updateActionSuggestionTool, handleUpdateActionSuggestion } from './tools/action-suggestions/update-action-suggestion.js';
+import { listActionSuggestionsTool, handleListActionSuggestions } from './tools/action-suggestions/list-action-suggestions.js';
+import { getActionSuggestionTool, handleGetActionSuggestion } from './tools/action-suggestions/get-action-suggestion.js';
+
 // Cross-collection intelligence (Phase 3)
 import { investigateTicketTool, handleInvestigateTicket } from './tools/tickets/investigate-ticket.js';
 import { getSystemHealthTool, handleGetSystemHealth } from './tools/system/get-system-health.js';
@@ -245,6 +251,11 @@ class SassLogsServer {
             getOpenHubTicketsSummaryTool,
             searchHubTicketsTool,
             getHubTicketTool,
+            // Action suggestions — comms co-pilot (WRITE, dev-first)
+            upsertActionSuggestionTool,
+            updateActionSuggestionTool,
+            listActionSuggestionsTool,
+            getActionSuggestionTool,
             // Cross-collection intelligence (Phase 3)
             investigateTicketTool,
             getSystemHealthTool,
@@ -395,6 +406,11 @@ class SassLogsServer {
             'get_open_hub_tickets_summary': handleGetOpenHubTicketsSummary,
             'search_hub_tickets': handleSearchHubTickets,
             'get_hub_ticket': handleGetHubTicket,
+            // Action suggestions — comms co-pilot (WRITE, dev-first)
+            'upsert_action_suggestion': handleUpsertActionSuggestion,
+            'update_action_suggestion': handleUpdateActionSuggestion,
+            'list_action_suggestions': handleListActionSuggestions,
+            'get_action_suggestion': handleGetActionSuggestion,
             // Cross-collection intelligence (Phase 3)
             'investigate_ticket': handleInvestigateTicket,
             'get_system_health': handleGetSystemHealth,

@@ -80,6 +80,8 @@ export const config = {
         hubTicketNotes: 'ticket_notes',
         hubTicketTags: 'ticket_tags',
         hubTicketStatusEvents: 'ticket_status_events',
+        // Action suggestions — comms co-pilot review queue (WRITE, dev-first)
+        actionSuggestions: 'action_suggestions',
     },
 
     defaultLimit: 50,

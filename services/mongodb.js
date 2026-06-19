@@ -18,6 +18,7 @@ import paymentsQueries from './queries/payments.js';
 import statesQueries from './queries/states.js';
 import emailQueries from './queries/email.js';
 import hubTicketsQueries from './queries/hub-tickets.js';
+import actionSuggestionsQueries from './queries/action-suggestions.js';
 
 class MongoDBService {
     constructor() {
@@ -96,6 +97,8 @@ class MongoDBService {
         this.hubTicketNotes = null;
         this.hubTicketTags = null;
         this.hubTicketStatusEvents = null;
+        // Action suggestions — comms co-pilot review queue (WRITE)
+        this.actionSuggestions = null;
         this.isConnected = false;
     }
 
@@ -181,6 +184,8 @@ class MongoDBService {
             this.hubTicketNotes = this.db.collection(config.collections.hubTicketNotes);
             this.hubTicketTags = this.db.collection(config.collections.hubTicketTags);
             this.hubTicketStatusEvents = this.db.collection(config.collections.hubTicketStatusEvents);
+            // Action suggestions — comms co-pilot review queue (WRITE)
+            this.actionSuggestions = this.db.collection(config.collections.actionSuggestions);
 
             this.isConnected = true;
             console.error(`[MCP] Connected to MongoDB: ${dbName}`);
@@ -361,6 +366,7 @@ Object.assign(
     statesQueries,
     emailQueries,
     hubTicketsQueries,
+    actionSuggestionsQueries,
 );
 
 export default new MongoDBService();
