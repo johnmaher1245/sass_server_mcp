@@ -4,6 +4,120 @@ import config from '../../config/config.js';
 // Matter Context & Search — query methods mixed into MongoDBService.prototype (see ../mongodb.js).
 // Plain object of method-shorthand functions; `this` binds to the singleton at call time.
 export default {
+    // List a matter's uploaded document FILES (the `documents` collection) with their S3 key + mimetype, so
+    // each can be fetched + read directly with read_document. Lean projection that DELIBERATELY excludes the
+    // stored ai_* OCR fields — reading is done fresh by the current model, not the old stamp.
+    async listMatterDocuments({ matter_id, since, status, mimetype, matter_document, limit, offset }) {
+        await this.ensureConnection();
+        const matter = await this.matters.findOne(this._matterFilter(matter_id), { projection: { _id: 1, name: 1, id: 1 } });
+        if (!matter) return { error: 'Matter not found', matter_id };
+
+        const filter = { matter: matter._id, deleted: { $ne: true } };
+        if (status) filter.status = status;
+        if (mimetype) filter.mimetype = mimetype;
+        if (since) filter.created_at = { $gte: this._isoToSeconds(since) };
+        if (matter_document) { try { filter.matter_documents = new ObjectId(matter_document); } catch { /* ignore bad id */ } }
+
+        const safeLimit = this._safeLimit(limit || 50);
+        const safeOffset = Math.max(offset || 0, 0);
+        const projection = { name: 1, key: 1, mimetype: 1, size: 1, status: 1, upload_type: 1, uploaded_by: 1, matter_documents: 1, created_at: 1, updated_at: 1 };
+
+        const [total, docs] = await Promise.all([
+            this.documents.countDocuments(filter),
+            this.documents.find(filter, { projection }).sort({ created_at: -1 }).skip(safeOffset).limit(safeLimit).toArray(),
+        ]);
+
+        const userIds = [...new Set(docs.map((d) => d.uploaded_by?.toString()).filter(Boolean))];
+        const userMap = await this._resolveNames(this.users, userIds, { given_name: 1, family_name: 1, display_name: 1 });
+
+        return {
+            matter: { _id: matter._id, name: matter.name, id: matter.id },
+            total_count: total,
+            offset: safeOffset,
+            limit: safeLimit,
+            has_more: safeOffset + docs.length < total,
+            documents: docs.map((d) => ({
+                file_id: d._id,
+                name: d.name,
+                key: d.key,
+                mimetype: d.mimetype,
+                size: d.size,
+                status: d.status,
+                upload_type: d.upload_type,
+                uploaded_by: d.uploaded_by ? userMap[d.uploaded_by.toString()] || null : null,
+                matter_documents: d.matter_documents,
+                created_at: d.created_at,
+                updated_at: d.updated_at,
+            })),
+        };
+    },
+
+    // Resolve a single document file → its S3 key + mimetype (used by read_document when given a file_id).
+    async getDocumentForRead({ file_id }) {
+        await this.ensureConnection();
+        if (!file_id) return { error: 'file_id is required' };
+        let _id;
+        try { _id = new ObjectId(file_id); } catch { return { error: 'Invalid file_id', file_id }; }
+        const doc = await this.documents.findOne({ _id }, { projection: { key: 1, mimetype: 1, name: 1, size: 1, deleted: 1 } });
+        if (!doc) return { error: 'Document not found', file_id };
+        if (doc.deleted) return { error: 'Document is deleted', file_id };
+        return { key: doc.key, mimetype: doc.mimetype, name: doc.name, size: doc.size };
+    },
+
+    // Trustee upload tracking for a matter — the bk_trustee_uploads categories (post-filing trustee hand-off):
+    // each category's stage + the linked document group, with the actual uploaded FILE refs (file_id + key +
+    // mimetype) resolved through matter_document_upload → documents, so each category's files can be read
+    // directly with read_document. Excludes soft-deleted rows by default.
+    async getMatterTrusteeUploads({ matter_id, stage }) {
+        await this.ensureConnection();
+        const matter = await this.matters.findOne(this._matterFilter(matter_id), { projection: { _id: 1, name: 1, id: 1 } });
+        if (!matter) return { error: 'Matter not found', matter_id };
+
+        const filter = { matter: matter._id };
+        filter.stage = stage || { $ne: 'deleted' };
+        const rows = await this.bkTrusteeUploads.find(filter).sort({ due_date: 1, created_at: -1 }).limit(500).toArray();
+
+        // Resolve the files behind each category: trustee row → matter_document_upload (group) → documents[].
+        const groupIds = [...new Set(rows.map((r) => r.matter_document_upload?.toString()).filter(Boolean))].map((id) => new ObjectId(id));
+        const groups = groupIds.length ? await this.matterDocumentUploads.find({ _id: { $in: groupIds } }, { projection: { documents: 1 } }).toArray() : [];
+        const groupDocs = new Map(groups.map((g) => [g._id.toString(), (g.documents || []).map((d) => d.toString())]));
+        const allFileIds = [...new Set(groups.flatMap((g) => (g.documents || []).map((d) => d.toString())))].map((id) => new ObjectId(id));
+        const files = allFileIds.length
+            ? await this.documents.find({ _id: { $in: allFileIds }, deleted: { $ne: true } }, { projection: { name: 1, key: 1, mimetype: 1, size: 1, created_at: 1 } }).toArray()
+            : [];
+        const fileMap = new Map(files.map((f) => [f._id.toString(), { file_id: f._id, name: f.name, key: f.key, mimetype: f.mimetype, size: f.size, created_at: f.created_at }]));
+
+        const userIds = [...new Set(rows.flatMap((r) => [...(r.assigned_to || []), r.uploaded_by].map((u) => u?.toString()).filter(Boolean)))];
+        const userMap = await this._resolveNames(this.users, userIds, { given_name: 1, family_name: 1, display_name: 1 });
+
+        const byStage = {};
+        for (const r of rows) byStage[r.stage] = (byStage[r.stage] || 0) + 1;
+
+        return {
+            matter: { _id: matter._id, name: matter.name, id: matter.id },
+            total: rows.length,
+            by_stage: byStage,
+            uploads: rows.map((r) => ({
+                _id: r._id,
+                name: r.name,
+                stage: r.stage,
+                priority: r.priority,
+                due_date: r.due_date,
+                matter_document_upload: r.matter_document_upload,
+                uploaded_at: r.uploaded_at,
+                uploaded_by: r.uploaded_by ? userMap[r.uploaded_by.toString()] || null : null,
+                upload_confirmation_notes: r.upload_confirmation_notes,
+                assigned_to: (r.assigned_to || []).map((u) => userMap[u.toString()] || u),
+                last_comment: r.last_comment,
+                last_comment_at: r.last_comment_at,
+                files: (r.matter_document_upload ? groupDocs.get(r.matter_document_upload.toString()) || [] : []).map((fid) => fileMap.get(fid)).filter(Boolean),
+                history_tail: (r.history || []).slice(-3),
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+            })),
+        };
+    },
+
     async searchMatters({ search, contact_name, contact_phone, contact_email, workflow_step, workflow_step_category, workflow_disposition, workflow, division, created_after, created_before, limit }) {
         await this.ensureConnection();
 

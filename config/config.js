@@ -19,6 +19,7 @@ export const config = {
         documents: 'documents',
         matterDocumentUploads: 'matter_document_uploads',
         matterDocuments: 'matter_documents',
+        bkTrusteeUploads: 'bk_trustee_uploads',
         outstandingItems: 'outstanding_items',
         events: 'events',
         timeEntries: 'time_entries',

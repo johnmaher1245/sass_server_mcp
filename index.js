@@ -99,6 +99,11 @@ import { searchMattersTool, handleSearchMatters } from './tools/matters/search-m
 // Attachments (Phase 12)
 import { getAttachmentTool, handleGetAttachment } from './tools/matters/get-attachment.js';
 
+// Document reading — fetch + view uploads directly (current-model OCR), incl. trustee uploads (Phase 24)
+import { listMatterDocumentsTool, handleListMatterDocuments } from './tools/matters/list-matter-documents.js';
+import { readDocumentTool, handleReadDocument } from './tools/matters/read-document.js';
+import { getMatterTrusteeUploadsTool, handleGetMatterTrusteeUploads } from './tools/matters/get-matter-trustee-uploads.js';
+
 // Outstanding items (Phase 11)
 import { getOutstandingItemDetailTool, handleGetOutstandingItemDetail } from './tools/outstanding-items/get-outstanding-item-detail.js';
 import { searchOutstandingItemsTool, handleSearchOutstandingItems } from './tools/outstanding-items/search-outstanding-items.js';
@@ -279,6 +284,10 @@ class SassLogsServer {
             searchMattersTool,
             // Attachments (Phase 12)
             getAttachmentTool,
+            // Document reading (Phase 24)
+            listMatterDocumentsTool,
+            readDocumentTool,
+            getMatterTrusteeUploadsTool,
             // Outstanding items (Phase 11)
             getOutstandingItemDetailTool,
             searchOutstandingItemsTool,
@@ -434,6 +443,10 @@ class SassLogsServer {
             'search_matters': handleSearchMatters,
             // Attachments (Phase 12)
             'get_attachment': handleGetAttachment,
+            // Document reading (Phase 24)
+            'list_matter_documents': handleListMatterDocuments,
+            'read_document': handleReadDocument,
+            'get_matter_trustee_uploads': handleGetMatterTrusteeUploads,
             // Outstanding items (Phase 11)
             'get_outstanding_item_detail': handleGetOutstandingItemDetail,
             'search_outstanding_items': handleSearchOutstandingItems,

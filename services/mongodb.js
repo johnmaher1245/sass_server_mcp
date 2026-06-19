@@ -36,6 +36,7 @@ class MongoDBService {
         this.documents = null;
         this.matterDocumentUploads = null;
         this.matterDocuments = null;
+        this.bkTrusteeUploads = null;
         this.outstandingItems = null;
         this.events = null;
         this.timeEntries = null;
@@ -123,6 +124,7 @@ class MongoDBService {
             this.documents = this.db.collection(config.collections.documents);
             this.matterDocumentUploads = this.db.collection(config.collections.matterDocumentUploads);
             this.matterDocuments = this.db.collection(config.collections.matterDocuments);
+            this.bkTrusteeUploads = this.db.collection(config.collections.bkTrusteeUploads);
             this.outstandingItems = this.db.collection(config.collections.outstandingItems);
             this.events = this.db.collection(config.collections.events);
             this.timeEntries = this.db.collection(config.collections.timeEntries);
