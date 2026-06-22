@@ -19,6 +19,7 @@ import statesQueries from './queries/states.js';
 import emailQueries from './queries/email.js';
 import hubTicketsQueries from './queries/hub-tickets.js';
 import actionSuggestionsQueries from './queries/action-suggestions.js';
+import bkQueries from './queries/bk.js';
 
 class MongoDBService {
     constructor() {
@@ -62,6 +63,11 @@ class MongoDBService {
         this.bkDistricts = null;
         this.bkQuestionnaires = null;
         this.bkFilings = null;
+        this.bkClaims = null;
+        this.bkObjections = null;
+        this.bkCreditors = null;
+        this.bkNewCaseEntries = null;
+        this.bkGarnishments = null;
         // Call center
         this.calls = null;
         this.callFlows = null;
@@ -150,6 +156,11 @@ class MongoDBService {
             this.bkDistricts = this.db.collection(config.collections.bkDistricts);
             this.bkQuestionnaires = this.db.collection(config.collections.bkQuestionnaires);
             this.bkFilings = this.db.collection(config.collections.bkFilings);
+            this.bkClaims = this.db.collection(config.collections.bkClaims);
+            this.bkObjections = this.db.collection(config.collections.bkObjections);
+            this.bkCreditors = this.db.collection(config.collections.bkCreditors);
+            this.bkNewCaseEntries = this.db.collection(config.collections.bkNewCaseEntries);
+            this.bkGarnishments = this.db.collection(config.collections.bkGarnishments);
             // Call center
             this.calls = this.db.collection(config.collections.calls);
             this.callFlows = this.db.collection(config.collections.callFlows);
@@ -369,6 +380,7 @@ Object.assign(
     emailQueries,
     hubTicketsQueries,
     actionSuggestionsQueries,
+    bkQueries,
 );
 
 export default new MongoDBService();

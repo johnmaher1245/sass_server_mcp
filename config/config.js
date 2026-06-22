@@ -45,6 +45,11 @@ export const config = {
         bkDistricts: 'bk_districts',
         bkQuestionnaires: 'bk_questionnaires',
         bkFilings: 'bk_filings',
+        bkClaims: 'bk_claims',
+        bkObjections: 'bk_objections',
+        bkCreditors: 'bk_creditors',
+        bkNewCaseEntries: 'bk_new_case_entries',
+        bkGarnishments: 'bk_garnishments',
         // Call center
         calls: 'calls',
         callFlows: 'call_flows',

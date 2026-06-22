@@ -12,7 +12,7 @@ import { ObjectId } from 'mongodb';
 const DISPOSITIONS = ['auto_draft', 'draft_verify', 'draft_escalate', 'escalate_human', 'hold_no_proof'];
 const STATUSES = ['pending', 'approved_sent', 'edited_sent', 'escalated', 'resolved', 'dismissed', 'expired'];
 const CHANNELS = ['sms', 'email', 'voicemail', 'support'];
-const RECOMMENDED_ACTIONS = ['no_reply', 'reply_resolve', 'escalate', 'review'];
+const RECOMMENDED_ACTIONS = ['no_reply', 'reply_resolve', 'escalate', 'ask_staff', 'review'];
 
 const _oid = (v) => (v && ObjectId.isValid(String(v)) ? new ObjectId(String(v)) : null);
 

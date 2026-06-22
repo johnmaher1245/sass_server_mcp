@@ -103,6 +103,12 @@ import { getAttachmentTool, handleGetAttachment } from './tools/matters/get-atta
 import { listMatterDocumentsTool, handleListMatterDocuments } from './tools/matters/list-matter-documents.js';
 import { readDocumentTool, handleReadDocument } from './tools/matters/read-document.js';
 import { getMatterTrusteeUploadsTool, handleGetMatterTrusteeUploads } from './tools/matters/get-matter-trustee-uploads.js';
+// BK post-filing (Phase 25) — case record, claims, objections
+import { getBkCaseTool, handleGetBkCase } from './tools/bk/get-bk-case.js';
+import { getMatterClaimsTool, handleGetMatterClaims } from './tools/bk/get-matter-claims.js';
+import { getMatterObjectionsTool, handleGetMatterObjections } from './tools/bk/get-matter-objections.js';
+import { searchUnlinkedBkCasesTool, handleSearchUnlinkedBkCases } from './tools/bk/search-unlinked-bk-cases.js';
+import { getMatterGarnishmentsTool, handleGetMatterGarnishments } from './tools/bk/get-matter-garnishments.js';
 
 // Outstanding items (Phase 11)
 import { getOutstandingItemDetailTool, handleGetOutstandingItemDetail } from './tools/outstanding-items/get-outstanding-item-detail.js';
@@ -288,6 +294,12 @@ class SassLogsServer {
             listMatterDocumentsTool,
             readDocumentTool,
             getMatterTrusteeUploadsTool,
+            // BK post-filing (Phase 25)
+            getBkCaseTool,
+            getMatterClaimsTool,
+            getMatterObjectionsTool,
+            searchUnlinkedBkCasesTool,
+            getMatterGarnishmentsTool,
             // Outstanding items (Phase 11)
             getOutstandingItemDetailTool,
             searchOutstandingItemsTool,
@@ -447,6 +459,12 @@ class SassLogsServer {
             'list_matter_documents': handleListMatterDocuments,
             'read_document': handleReadDocument,
             'get_matter_trustee_uploads': handleGetMatterTrusteeUploads,
+            // BK post-filing (Phase 25)
+            'get_bk_case': handleGetBkCase,
+            'get_matter_claims': handleGetMatterClaims,
+            'get_matter_objections': handleGetMatterObjections,
+            'search_unlinked_bk_cases': handleSearchUnlinkedBkCases,
+            'get_matter_garnishments': handleGetMatterGarnishments,
             // Outstanding items (Phase 11)
             'get_outstanding_item_detail': handleGetOutstandingItemDetail,
             'search_outstanding_items': handleSearchOutstandingItems,
