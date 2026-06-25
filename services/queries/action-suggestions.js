@@ -1,4 +1,7 @@
 import { ObjectId } from 'mongodb';
+import {
+    validateActionSuggestionDocument,
+} from '../../generated/suggested-actions-registry.js';
 
 // Action Suggestions — the "Suggested Actions" review queue (a denormalized read-model).
 // Each doc = one surfaced inbound client message + an AI-drafted reply + LINKED proof,
@@ -37,12 +40,22 @@ export default {
             return { error: `recommended_action must be one of: ${RECOMMENDED_ACTIONS.join(', ')}` };
         }
 
-        const now = Math.floor(Date.now() / 1000);
         const recommendedAction = RECOMMENDED_ACTIONS.includes(s.recommended_action)
             ? s.recommended_action
             : RECOMMENDED_ACTIONS.includes(s.context?.recommended_action)
                 ? s.context.recommended_action
                 : 'review';
+
+        const validation = validateActionSuggestionDocument({ ...s, recommended_action: recommendedAction });
+        if (!validation.ok) {
+            return {
+                error: 'invalid_actions',
+                message: 'suggestion.actions/evidence did not match the supported suggested-actions registry',
+                errors: validation.errors,
+            };
+        }
+
+        const now = Math.floor(Date.now() / 1000);
 
         // Scoping refs stored as ObjectIds (for tenant scoping + indexes); display names
         // kept denormalized under `display` so the UI renders without extra joins.
@@ -77,8 +90,9 @@ export default {
             thread: Array.isArray(s.thread) ? s.thread : [],
             draft: s.draft || null,
             proof: Array.isArray(s.proof) ? s.proof : [],
+            evidence: Array.isArray(s.evidence) ? s.evidence : [],
             context: s.context || {},
-            actions: Array.isArray(s.actions) ? s.actions : [],
+            actions: validation.actions,
             links: s.links || {},
             guardrails: {
                 auto_send: false,                                   // structural — never true
@@ -160,6 +174,14 @@ export default {
             this.actionSuggestions.find(filter).sort({ created_at: -1 }).skip(safeOffset).limit(safeLimit).toArray(),
         ]);
 
+        const evidenceCount = (i) => (
+            (Array.isArray(i.proof) ? i.proof.length : 0)
+            + (Array.isArray(i.evidence) ? i.evidence.length : 0)
+            + (Array.isArray(i.actions)
+                ? i.actions.reduce((sum, action) => sum + (Array.isArray(action?.evidence) ? action.evidence.length : 0), 0)
+                : 0)
+        );
+
         const lean = items.map(i => ({
             _id: i._id.toString(),
             status: i.status,
@@ -173,7 +195,7 @@ export default {
             matter: i.matter ? i.matter.toString() : null,
             display: i.display,
             draft_preview: i.draft?.body ? String(i.draft.body).slice(0, 140) : '',
-            proof_count: Array.isArray(i.proof) ? i.proof.length : 0,
+            proof_count: evidenceCount(i),
             created_at: i.created_at,
             updated_at: i.updated_at,
         }));

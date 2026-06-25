@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node --test"
+    "pretest": "node scripts/check-suggested-actions-registry.mjs",
+    "test": "node --test",
+    "check:suggested-actions-registry": "node scripts/check-suggested-actions-registry.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",
