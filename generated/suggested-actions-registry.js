@@ -403,7 +403,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
   "commonValidation": {
     "rejectEditorSequence": true,
     "rejectEditorInPlan": true,
-    "chargeBeforeConfirmingReply": true
+    "chargeBeforeConfirmingReply": true,
+    "approveDocumentBeforeConfirmingReply": true
   },
   "actions": {
     "send_reply": {
@@ -897,7 +898,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "approve_doc"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "document.approve",
       "danger": "document_status_change",
       "paramsSchema": "approve_document",
       "requiredToPropose": [
@@ -915,7 +917,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.matter_document_upload_id",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [
           {
@@ -1171,6 +1178,7 @@ const ALIAS_TO_CANONICAL = {
 };
 const EVIDENCE_KIND_SET = new Set(registryAny.evidenceKinds || []);
 const PAYMENT_CONFIRMATION_RE = /\b(payment|charge|card)\b.{0,60}\b(received|processed|went through|succeeded|successful|paid|charged)\b|\b(received|processed|charged)\b.{0,60}\b(payment|charge|card)\b/i;
+const DOCUMENT_APPROVAL_CONFIRMATION_RE = /\b(document|documents|statement|statements|upload|uploaded|file|files|pay\s*stub|pay\s*stubs|tax\s*return|tax\s*returns)\b.{0,100}\b(approved|accepted|verified|received and verified)\b|\b(approved|accepted|verified|received and verified)\b.{0,100}\b(document|documents|statement|statements|upload|uploaded|file|files|pay\s*stub|pay\s*stubs|tax\s*return|tax\s*returns)\b/i;
 
 export const ACTION_TYPES = Object.keys(ACTION_DEFINITIONS);
 export const EVIDENCE_KINDS = [...(registryAny.evidenceKinds || [])];
@@ -1419,6 +1427,23 @@ function validatePaymentConfirmationOrdering(actions, errors) {
   }
 }
 
+function validateDocumentApprovalOrdering(actions, errors) {
+  const approvalSequences = actions
+    .filter((action) => canonicalActionType(action.type) === 'approve_document')
+    .map((action) => Number(action.sequence))
+    .filter((sequence) => Number.isFinite(sequence));
+  if (!approvalSequences.length) return;
+  for (const action of actions) {
+    if (canonicalActionType(action.type) !== 'send_reply') continue;
+    const sequence = Number(action.sequence);
+    if (!Number.isFinite(sequence)) continue;
+    const confirmsDocumentApproval = bodyTextsForSendReply(action).some((body) => DOCUMENT_APPROVAL_CONFIRMATION_RE.test(body));
+    if (confirmsDocumentApproval && !approvalSequences.some((approvalSeq) => approvalSeq < sequence)) {
+      errors.push(makeError(action, 'sequence', 'document_approval_before_reply', 'a send_reply that says or implies documents were approved must run after approve_document', 'approve_document sequence lower than send_reply', sequence));
+    }
+  }
+}
+
 export function canonicalActionType(type) {
   const t = str(type);
   if (!t) return '';
@@ -1463,6 +1488,9 @@ export function validateSuggestedActions(actions, options = {}) {
   }
   if (registryAny.commonValidation?.chargeBeforeConfirmingReply && (!lanes || lanes.includes('perform'))) {
     validatePaymentConfirmationOrdering(normalizedActions, errors);
+  }
+  if (registryAny.commonValidation?.approveDocumentBeforeConfirmingReply && (!lanes || lanes.includes('perform'))) {
+    validateDocumentApprovalOrdering(normalizedActions, errors);
   }
   return { ok: errors.length === 0, errors, actions: normalizedActions };
 }

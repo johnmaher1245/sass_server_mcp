@@ -90,6 +90,7 @@ const validActionFixtures = {
     approve_document: {
         key: 'approve_doc',
         type: 'approve_document',
+        sequence: 1,
         params: { matter_document_upload_id: 'mdu1', target_document_ids: ['doc1'], category_name: 'Pay stubs' },
         evidence: [{ kind: 'document', id: 'doc1' }],
     },
@@ -225,6 +226,28 @@ test('payment confirmation reply must follow charge_payment', () => {
 
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((e) => e.code === 'payment_confirmation_before_charge'));
+});
+
+test('document approval confirmation reply must follow approve_document', () => {
+    const result = validateSuggestedActions([
+        {
+            key: 'reply',
+            type: 'send_reply',
+            sequence: 1,
+            params: { default_channel: 'sms', bodies: { sms: { body: 'Thanks, we received your bank statements and they have been approved.' } } },
+            evidence: [],
+        },
+        {
+            key: 'approve_doc',
+            type: 'approve_document',
+            sequence: 2,
+            params: { matter_document_upload_id: 'mdu1', target_document_ids: ['doc1'], category_name: 'Bank Statements' },
+            evidence: [{ kind: 'document', id: 'doc1' }],
+        },
+    ]);
+
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => e.code === 'document_approval_before_reply'));
 });
 
 test('upsert rejects invalid cards without inserting or upserting', async () => {
