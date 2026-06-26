@@ -1481,7 +1481,9 @@ function validateAction(action, def, options, errors) {
     }
   }
   for (const rule of rules) checkRule(action, rule, errors);
-  validateActionEvidence(action, def, errors);
+  // Human-initiated (inline/manual) actions carry the supervisor's own authority, so the AI-evidence gate
+  // (def.evidence.hard) does not apply — params are still fully validated above.
+  if (!options.skipEvidence) validateActionEvidence(action, def, errors);
 }
 
 function bodyTextsForSendReply(action) {
