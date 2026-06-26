@@ -548,7 +548,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
         "update_subscription",
         "create_payment_subscription"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "payment.update_plan",
       "danger": "billing_change",
       "paramsSchema": "payment_plan",
       "requiredToPropose": [
@@ -645,7 +646,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "create_claimable"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "claimable.create",
       "danger": "task_creation",
       "paramsSchema": "claimable",
       "requiredToPropose": [
@@ -654,7 +656,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.name",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [],
         "advisory": "Cite the source for the promised follow-up when available."
@@ -748,7 +755,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "fill_bk_case"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "bk_case.update",
       "danger": "case_field_update",
       "paramsSchema": "bk_case_fields",
       "requiredToPropose": [
@@ -759,7 +767,14 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "custom": "bk_case_fields"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.fields",
+          "type": "array",
+          "minItems": 1,
+          "custom": "bk_case_fields"
+        }
+      ],
       "evidence": {
         "hard": [
           {
@@ -784,7 +799,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
     "link_case": {
       "label": "Link PACER case",
       "aliases": [],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "bk_case.link",
       "danger": "case_link",
       "paramsSchema": "link_case",
       "requiredToPropose": [
@@ -797,7 +813,16 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.case_number",
+          "type": "string"
+        },
+        {
+          "path": "params.court_code",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [
           {
@@ -824,7 +849,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "update_trustee_upload"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "trustee_upload.update",
       "danger": "trustee_document_status",
       "paramsSchema": "trustee_upload",
       "requiredToPropose": [
@@ -842,7 +868,21 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "custom": "trustee_upload_action"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.trustee_upload_id",
+          "type": "string"
+        },
+        {
+          "path": "params.action",
+          "type": "string",
+          "enum": [
+            "uploaded",
+            "unable"
+          ],
+          "custom": "trustee_upload_action"
+        }
+      ],
       "evidence": {
         "hard": [],
         "advisory": "Cite trustee notice, docket entry, or document evidence for the status change when available."
@@ -858,7 +898,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "set_installments"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "filing_fee_installments.sync",
       "danger": "case_field_update",
       "paramsSchema": "filing_fee_installments",
       "requiredToPropose": [
@@ -873,7 +914,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "minItems": 1
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.bk_case_id",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [
           {
@@ -945,7 +991,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
     "request_approval": {
       "label": "Request approval",
       "aliases": [],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "approval.request",
       "danger": "staff_assignment",
       "paramsSchema": "request_approval",
       "requiredToPropose": [
@@ -958,7 +1005,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.title",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [],
         "advisory": "Cite specific sources for the approval request when available."
@@ -973,7 +1025,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
     "add_note": {
       "label": "Add note",
       "aliases": [],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "matter_note.create",
       "danger": "case_note",
       "paramsSchema": "add_note",
       "requiredToPropose": [
@@ -982,7 +1035,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.body",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [],
         "advisory": "Cite the client message/document/event the note summarizes when possible."
@@ -997,7 +1055,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "finish_item"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "outstanding_item.finish",
       "danger": "task_completion",
       "paramsSchema": "complete_item",
       "requiredToPropose": [
@@ -1010,7 +1069,16 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.item_id",
+          "type": "string"
+        },
+        {
+          "path": "params.outcome",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [],
         "advisory": "Cite the source that proves the item is complete when available."
@@ -1027,7 +1095,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
         "open_objection",
         "update_objection"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "bk_objection.upsert",
       "danger": "legal_deadline",
       "paramsSchema": "objection",
       "requiredToPropose": [
@@ -1040,7 +1109,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.name",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [
           {
@@ -1069,7 +1143,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
         "open_garnishment",
         "update_garnishment"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "bk_garnishment.upsert",
       "danger": "legal_deadline",
       "paramsSchema": "garnishment",
       "requiredToPropose": [
@@ -1082,7 +1157,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.name",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [
           {
@@ -1109,7 +1189,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
       "aliases": [
         "convert"
       ],
-      "lane": "editor",
+      "lane": "perform",
+      "capability": "bk_case.convert_chapter",
       "danger": "case_state_change",
       "paramsSchema": "convert_chapter",
       "requiredToPropose": [
@@ -1127,7 +1208,12 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string"
         }
       ],
-      "requiredToExecute": [],
+      "requiredToExecute": [
+        {
+          "path": "params.date_chapter_conversion",
+          "type": "string"
+        }
+      ],
       "evidence": {
         "hard": [
           {

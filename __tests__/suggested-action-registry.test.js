@@ -33,6 +33,7 @@ const validActionFixtures = {
     update_plan: {
         key: 'plan',
         type: 'update_plan',
+        sequence: 1,
         params: { amount: 150, interval: 'monthly', next_run_date: '2026-07-01' },
         evidence: [],
     },
@@ -46,6 +47,7 @@ const validActionFixtures = {
     claimable: {
         key: 'claimable',
         type: 'claimable',
+        sequence: 1,
         params: { name: 'Follow up with client' },
         evidence: [],
     },
@@ -66,24 +68,28 @@ const validActionFixtures = {
     update_bk_case: {
         key: 'bk_case',
         type: 'update_bk_case',
+        sequence: 1,
         params: { fields: [{ key: 'date_filed', value: '2026-06-01T00:00:00.000Z' }] },
         evidence: [{ kind: 'docket', id: 'docket1' }],
     },
     link_case: {
         key: 'link_case',
         type: 'link_case',
+        sequence: 1,
         params: { court_code: 'ohnb', case_number: '24-12345' },
         evidence: [{ kind: 'docket', id: 'docket1' }],
     },
     trustee_upload: {
         key: 'trustee_upload',
         type: 'trustee_upload',
+        sequence: 1,
         params: { trustee_upload_id: 'tu1', action: 'uploaded' },
         evidence: [],
     },
     filing_fee_installments: {
         key: 'installments',
         type: 'filing_fee_installments',
+        sequence: 1,
         params: { total: 338, installments: [{ installment_number: 1, amount_due: 84.5, due_date: '2026-07-01T00:00:00.000Z' }] },
         evidence: [{ kind: 'docket', id: 'docket1' }],
     },
@@ -97,36 +103,42 @@ const validActionFixtures = {
     request_approval: {
         key: 'approval',
         type: 'request_approval',
+        sequence: 1,
         params: { title: 'Attorney sign-off', reason: 'Ready to file.' },
         evidence: [],
     },
     add_note: {
         key: 'note',
         type: 'add_note',
+        sequence: 1,
         params: { body: 'Client confirmed the filing date.' },
         evidence: [],
     },
     complete_item: {
         key: 'complete_item',
         type: 'complete_item',
+        sequence: 1,
         params: { item_id: 'item1', outcome: 'Received and filed.' },
         evidence: [],
     },
     objection: {
         key: 'objection',
         type: 'objection',
+        sequence: 1,
         params: { name: 'Objection to claim #1', reason: 'Claim appears duplicated.' },
         evidence: [{ kind: 'claim', id: 'claim1' }],
     },
     garnishment: {
         key: 'garnishment',
         type: 'garnishment',
+        sequence: 1,
         params: { name: 'Garnishment - ABC Collections', reason: 'Potential preference recovery.' },
         evidence: [{ kind: 'docket', id: 'docket1' }],
     },
     convert_chapter: {
         key: 'convert',
         type: 'convert_chapter',
+        sequence: 1,
         params: { to_chapter: '13', reason: 'Client requested conversion.' },
         evidence: [{ kind: 'client_message', id: 'msg1' }],
     },
@@ -288,7 +300,7 @@ test('upsert rejects invalid cards without inserting or upserting', async () => 
 });
 
 test('update_bk_case validates field-level typing against bkCaseFieldMeta', () => {
-    const base = () => ({ key: 'bk_case', type: 'update_bk_case', evidence: [{ kind: 'docket', id: 'docket1' }] });
+    const base = () => ({ key: 'bk_case', type: 'update_bk_case', sequence: 1, evidence: [{ kind: 'docket', id: 'docket1' }] });
 
     const unknownField = validateSuggestedActions([{ ...base(), params: { fields: [{ key: 'not_a_field', value: 'x' }] } }]);
     assert.equal(unknownField.ok, false);
@@ -329,7 +341,7 @@ test('send_reply requires the default channel body to be present', () => {
 
 test('trustee_upload action must be uploaded or unable', () => {
     const result = validateSuggestedActions([{
-        key: 'tu', type: 'trustee_upload',
+        key: 'tu', type: 'trustee_upload', sequence: 1,
         params: { trustee_upload_id: 'tu1', action: 'maybe' },
         evidence: [],
     }]);
@@ -338,10 +350,10 @@ test('trustee_upload action must be uploaded or unable', () => {
 });
 
 test('editor-lane actions reject sequence and in_plan', () => {
-    const withSequence = validateSuggestedActions([{ ...clone(validActionFixtures.add_note), sequence: 1 }]);
+    const withSequence = validateSuggestedActions([{ ...clone(validActionFixtures.send_chat_message), sequence: 1 }]);
     assert.ok(withSequence.errors.some((e) => e.code === 'editor_sequence_not_allowed'));
 
-    const withInPlan = validateSuggestedActions([{ ...clone(validActionFixtures.claimable), in_plan: true }]);
+    const withInPlan = validateSuggestedActions([{ ...clone(validActionFixtures.send_chat_message), in_plan: true }]);
     assert.ok(withInPlan.errors.some((e) => e.code === 'editor_in_plan_not_allowed'));
 });
 
