@@ -845,7 +845,7 @@ export const SUGGESTED_ACTION_REGISTRY = {
       ]
     },
     "trustee_upload": {
-      "label": "Trustee upload",
+      "label": "PF Docs",
       "aliases": [
         "update_trustee_upload"
       ],
