@@ -863,7 +863,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string",
           "enum": [
             "uploaded",
-            "unable"
+            "unable",
+            "not_needed"
           ],
           "custom": "trustee_upload_action"
         }
@@ -878,7 +879,8 @@ export const SUGGESTED_ACTION_REGISTRY = {
           "type": "string",
           "enum": [
             "uploaded",
-            "unable"
+            "unable",
+            "not_needed"
           ],
           "custom": "trustee_upload_action"
         }
@@ -1344,8 +1346,8 @@ function checkStaffChatBody(action, rule, value, errors, path) {
 }
 
 function checkTrusteeUploadAction(action, rule, value, errors, path) {
-  if (value !== 'uploaded' && value !== 'unable') {
-    errors.push(makeError(action, path, 'invalid_trustee_upload_action', 'trustee_upload.params.action must be uploaded or unable', ['uploaded', 'unable'], value));
+  if (value !== 'uploaded' && value !== 'unable' && value !== 'not_needed') {
+    errors.push(makeError(action, path, 'invalid_trustee_upload_action', 'trustee_upload.params.action must be uploaded, unable, or not_needed', ['uploaded', 'unable', 'not_needed'], value));
   }
 }
 
